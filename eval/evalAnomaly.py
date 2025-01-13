@@ -4,10 +4,13 @@ import cv2
 import glob
 import torch
 import random
-from PIL import Image
 import numpy as np
-from erfnet import ERFNet
 import os.path as osp
+import torch.nn.functional as F
+import torchvision.transforms as T
+
+from PIL import Image
+from erfnet import ERFNet
 from argparse import ArgumentParser
 from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr,plot_barcode
 from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
@@ -24,6 +27,15 @@ NUM_CLASSES = 20
 # gpu training specific
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = True
+
+# Preprocessing
+image_transform = T.Compose([
+  T.Resize((512, 1024), Image.BILINEAR), T.ToTensor()
+])
+
+mask_transform = T.Compose([
+  T.Resize((512, 1024), Image.NEAREST)
+])
 
 def main():
     parser = ArgumentParser()
@@ -42,7 +54,10 @@ def main():
     parser.add_argument('--num-workers', type=int, default=4)
     parser.add_argument('--batch-size', type=int, default=1)
     parser.add_argument('--cpu', action='store_true')
-    args = parser.parse_args()
+    # new arguments
+    parser.add_argument('--method', type=str, default='msp')
+    parser.add_argument('--temperature', type=float, default=1.0)
+    args = parser.parse_args()  # argparse.Namespace object that contained arguments
     anomaly_score_list = []
     ood_gts_list = []
 
@@ -53,8 +68,8 @@ def main():
     modelpath = args.loadDir + args.loadModel
     weightspath = args.loadDir + args.loadWeights
 
-    print ("Loading model: " + modelpath)
-    print ("Loading weights: " + weightspath)
+    # print ("Loading model: " + modelpath)
+    # print ("Loading weights: " + weightspath)
 
     model = ERFNet(NUM_CLASSES)
 
@@ -74,17 +89,33 @@ def main():
                 own_state[name].copy_(param)
         return model
 
-    model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
-    print ("Model and weights LOADED successfully")
+    model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage, weights_only=True))
+    # print ("Model and weights LOADED successfully")
     model.eval()
     
     for path in glob.glob(os.path.expanduser(str(args.input[0]))):
-        print(path)
-        images = torch.from_numpy(np.array(Image.open(path).convert('RGB'))).unsqueeze(0).float()
-        images = images.permute(0,3,1,2)
+        # images = torch.from_numpy(np.array(Image.open(path).convert('RGB'))).unsqueeze(0).float().cuda()
+        # images = images.permute(0,3,1,2)
+        images = image_transform(Image.open(path).convert('RGB')).unsqueeze(0).float().cuda()
         with torch.no_grad():
-            result = model(images)
-        anomaly_result = 1.0 - np.max(result.squeeze(0).data.cpu().numpy(), axis=0)            
+            result = model(images).squeeze(0)
+        # print(result.shape)
+
+        # methods
+        result = result[:-1]  # remove background class
+        if args.method == "msp":
+          softmax_probs = F.softmax(result / args.temperature, dim=0)
+          anomaly_result = 1.0 - torch.max(softmax_probs, dim=0)[0]
+        elif args.method == "maxlogit":
+          anomaly_result = -torch.max(result, dim=0)[0]
+        elif args.method == "maxentropy":
+          anomaly_result = torch.div(
+              torch.sum(-F.softmax(result, dim=0) * F.log_softmax(result, dim=0), dim=0),
+              torch.log(torch.tensor(result.size(0))),
+          )
+
+        anomaly_result = anomaly_result.data.cpu().numpy()
+        # anomaly_result = 1.0 - np.max(result.squeeze(0).data.cpu().numpy(), axis=0)            
         pathGT = path.replace("images", "labels_masks")                
         if "RoadObsticle21" in pathGT:
            pathGT = pathGT.replace("webp", "png")
@@ -94,7 +125,7 @@ def main():
            pathGT = pathGT.replace("jpg", "png")  
 
         mask = Image.open(pathGT)
-        ood_gts = np.array(mask)
+        ood_gts = np.array(mask_transform(mask))
 
         if "RoadAnomaly" in pathGT:
             ood_gts = np.where((ood_gts==2), 1, ood_gts)
@@ -136,8 +167,8 @@ def main():
     prc_auc = average_precision_score(val_label, val_out)
     fpr = fpr_at_95_tpr(val_out, val_label)
 
-    print(f'AUPRC score: {prc_auc*100.0}')
-    print(f'FPR@TPR95: {fpr*100.0}')
+    print(f'\t\tAUPRC score: {prc_auc*100.0:.3f}')
+    print(f'\t\tFPR@TPR95: {fpr*100.0:.3f}')
 
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
