@@ -102,17 +102,20 @@ def main():
         # print(result.shape)
 
         # methods
-        result = result[:-1]  # remove background class
-        if args.method == "msp":
-          softmax_probs = F.softmax(result / args.temperature, dim=0)
-          anomaly_result = 1.0 - torch.max(softmax_probs, dim=0)[0]
-        elif args.method == "maxlogit":
-          anomaly_result = -torch.max(result, dim=0)[0]
-        elif args.method == "maxentropy":
-          anomaly_result = torch.div(
-              torch.sum(-F.softmax(result, dim=0) * F.log_softmax(result, dim=0), dim=0),
-              torch.log(torch.tensor(result.size(0))),
-          )
+        if args.method == "void":
+            anomaly_result = F.softmax(result, dim=0)[-1]
+        else:
+            result = result[:-1]  # remove background class
+            if args.method == "msp":
+                softmax_probs = F.softmax(result / args.temperature, dim=0)
+                anomaly_result = 1.0 - torch.max(softmax_probs, dim=0)[0]
+            elif args.method == "maxlogit":
+                anomaly_result = -torch.max(result, dim=0)[0]
+            elif args.method == "maxentropy":
+                anomaly_result = torch.div(
+                    torch.sum(-F.softmax(result, dim=0) * F.log_softmax(result, dim=0), dim=0),
+                    torch.log(torch.tensor(result.size(0))),
+                )
 
         anomaly_result = anomaly_result.data.cpu().numpy()
         # anomaly_result = 1.0 - np.max(result.squeeze(0).data.cpu().numpy(), axis=0)            
