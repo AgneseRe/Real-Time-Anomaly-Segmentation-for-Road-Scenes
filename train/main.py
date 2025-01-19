@@ -400,7 +400,12 @@ def main(args):
     #Load Model
     assert os.path.exists(args.model + ".py"), "Error: model definition not found"
     model_file = importlib.import_module(args.model)
-    model = model_file.Net(NUM_CLASSES)
+    if args.model == "erfnet":
+        model = model_file.ErfNet(NUM_CLASSES)
+    elif args.model == "bisenet":
+        model = model_file.BiSeNet(NUM_CLASSES)
+    else:
+        model = model_file.ENet(NUM_CLASSES)
     copyfile(args.model + ".py", savedir + '/' + args.model + ".py")
     
     if args.cuda:
@@ -503,5 +508,7 @@ if __name__ == '__main__':
     parser.add_argument('--iouTrain', action='store_true', default=False) #recommended: False (takes more time to train otherwise)
     parser.add_argument('--iouVal', action='store_true', default=True)  
     parser.add_argument('--resume', action='store_true')    #Use this flag to load last checkpoint for training  
+
+    parser.add_argument('--loadWeights', default='erfnet_pretrained.pth')
 
     main(parser.parse_args())
