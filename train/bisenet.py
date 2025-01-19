@@ -36,18 +36,18 @@ class ConvBNReLU(nn.Module):
         self.relu = nn.ReLU(inplace = True)
         self.init_weight()
 
-        def forward(self, input):
-            input = self.conv(input)
-            input = self.bn(input)
-            input = self.relu(input)
-            return input
+    def forward(self, input):
+      input = self.conv(input)
+      input = self.bn(input)
+      input = self.relu(input)
+      return input
         
-        def init_weight(self):
-            for layer in self.children():
-                if isinstance(layer, nn.Conv2d):
-                    nn.init.kaiming_normal_(layer.weight, a = 1)
-                    if not layer.bias is None:
-                        nn.init.constant_(layer.bias, 0)
+    def init_weight(self):
+        for layer in self.children():
+            if isinstance(layer, nn.Conv2d):
+                nn.init.kaiming_normal_(layer.weight, a = 1)
+                if not layer.bias is None:
+                    nn.init.constant_(layer.bias, 0)
 
 class UpSample(nn.Module): 
 
@@ -105,7 +105,7 @@ class SpatialPath(nn.Module):
 class AttentionRefinementModule(nn.Module):
     def __init__(self, in_chan, out_chan, *args, **kwargs):
         super(AttentionRefinementModule, self).__init__()
-        self.conv = ConvBNReLU(in_chan, out_chan, ks=3, stride=1, padding=1)
+        self.conv = ConvBNReLU(in_chan, out_chan, k_size=3, stride=1, padding=1)
         self.conv_atten = nn.Conv2d(out_chan, out_chan, kernel_size=1, bias=False)
         self.bn_atten = BatchNorm2d(out_chan)
         #  self.sigmoid_atten = nn.Sigmoid()
@@ -134,9 +134,9 @@ class ContextPath(nn.Module):
         self.resnet = Resnet18()
         self.arm16 = AttentionRefinementModule(256, 128)
         self.arm32 = AttentionRefinementModule(512, 128)
-        self.conv_head32 = ConvBNReLU(128, 128, ks=3, stride=1, padding=1)
-        self.conv_head16 = ConvBNReLU(128, 128, ks=3, stride=1, padding=1)
-        self.conv_avg = ConvBNReLU(512, 128, ks=1, stride=1, padding=0)
+        self.conv_head32 = ConvBNReLU(128, 128, k_size=3, stride=1, padding=1)
+        self.conv_head16 = ConvBNReLU(128, 128, k_size=3, stride=1, padding=1)
+        self.conv_avg = ConvBNReLU(512, 128, k_size=1, stride=1, padding=0)
         self.up32 = nn.Upsample(scale_factor=2.0)
         self.up16 = nn.Upsample(scale_factor=2.0)
 
@@ -181,7 +181,7 @@ class ContextPath(nn.Module):
 class FeatureFusionModule(nn.Module): 
     def __init__(self, in_chan, out_chan, *args, **kwargs):
         super(FeatureFusionModule, self).__init__()
-        self.convblk = ConvBNReLU(in_chan, out_chan, ks=1, stride=1, padding=0)
+        self.convblk = ConvBNReLU(in_chan, out_chan, k_size=1, stride=1, padding=0)
         ## use conv-bn instead of 2 layer mlp, so that tensorrt 7.2.3.4 can work for fp16
         self.conv = nn.Conv2d(out_chan, out_chan, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn = nn.BatchNorm2d(out_chan)
@@ -237,7 +237,7 @@ class BiSeNetOutput(nn.Module):
         super(BiSeNetOutput, self).__init__()
         self.up_factor = up_factor
         out_chan = n_classes
-        self.conv = ConvBNReLU(in_chan, mid_chan, ks=3, stride=1, padding=1)
+        self.conv = ConvBNReLU(in_chan, mid_chan, k_size=3, stride=1, padding=1)
         self.conv_out = nn.Conv2d(mid_chan, out_chan, kernel_size=1, bias=True)
         self.up = nn.Upsample(scale_factor=up_factor, mode='bilinear', align_corners=False)
         self.init_weight()
