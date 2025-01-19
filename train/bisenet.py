@@ -66,7 +66,7 @@ class UpSample(nn.Module):
     def init_weight(self):
         nn.init.xavier_normal_(self.proj.weight, gain = 1.0)
 
-class SpatialPath(nn.Modle): 
+class SpatialPath(nn.Module): 
     def __init__(self, *args, **kwargs):
         super(SpatialPath, self).__init__()
         self.conv1 = ConvBNReLU(3, 64, k_size=7, stride=2, padding=3)
