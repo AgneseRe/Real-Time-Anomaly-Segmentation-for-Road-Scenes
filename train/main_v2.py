@@ -25,6 +25,8 @@ from shutil import copyfile
 
 # import augmentations transformations and loss functions
 from train.utils.augmentations import ErfNetTransform
+from train.utils.losses.ce_loss import CrossEntropyLoss2d
+from train.utils.losses.ohem_ce_loss import OhemCELoss
 
 NUM_CHANNELS = 3
 NUM_CLASSES = 20 # cityscapes 19 classes + void
@@ -34,72 +36,48 @@ image_transform = ToPILImage()
 
 
 def train(args, model, enc=False):
+    """
+    Train a deep learning model using the Cityscapes dataset.
+
+    Parameters:
+        - args (argparse.Namespace): Configuration object containing attributes for training
+            the path of the dataset directory, the batch size for training and validation, 
+            the number of epochs to train, whether to compute IoU during training etc.
+        - model (torch.nn.Module): Pytorch model to train.
+        - enc (boolean): Flag for indicating whether to train the encoder or the decoder part.
+    """
     best_acc = 0
 
-    #TODO: calculate weights by processing dataset histogram (now its being set by hand from the torch values)
-    #create a loder to run all images and calculate histogram of labels, then create weight array using class balancing
+    assert os.path.exists(args.datadir), "Error: datadir (dataset directory) could not be loaded" 
 
-    weight = torch.ones(NUM_CLASSES)
-    if (enc):
-        weight[0] = 2.3653597831726	
-        weight[1] = 4.4237880706787	
-        weight[2] = 2.9691488742828	
-        weight[3] = 5.3442072868347	
-        weight[4] = 5.2983593940735	
-        weight[5] = 5.2275490760803	
-        weight[6] = 5.4394111633301	
-        weight[7] = 5.3659925460815	
-        weight[8] = 3.4170460700989	
-        weight[9] = 5.2414722442627	
-        weight[10] = 4.7376127243042	
-        weight[11] = 5.2286224365234	
-        weight[12] = 5.455126285553	
-        weight[13] = 4.3019247055054	
-        weight[14] = 5.4264230728149	
-        weight[15] = 5.4331531524658	
-        weight[16] = 5.433765411377	
-        weight[17] = 5.4631009101868	
-        weight[18] = 5.3947434425354
-    else:
-        weight[0] = 2.8149201869965	
-        weight[1] = 6.9850029945374	
-        weight[2] = 3.7890393733978	
-        weight[3] = 9.9428062438965	
-        weight[4] = 9.7702074050903	
-        weight[5] = 9.5110931396484	
-        weight[6] = 10.311357498169	
-        weight[7] = 10.026463508606	
-        weight[8] = 4.6323022842407	
-        weight[9] = 9.5608062744141	
-        weight[10] = 7.8698215484619	
-        weight[11] = 9.5168733596802	
-        weight[12] = 10.373730659485	
-        weight[13] = 6.6616044044495	
-        weight[14] = 10.260489463806	
-        weight[15] = 10.287888526917	
-        weight[16] = 10.289801597595	
-        weight[17] = 10.405355453491	
-        weight[18] = 10.138095855713	
+    # Augmentations Transformations (different models)
+    if args.model == "erfnet":
+        co_transform = ErfNetTransform(enc, augment=True, height=args.height)
+        co_transform_val = ErfNetTransform(enc, augment=False, height=args.height)
+    elif args.model == "bisenet":
+        ...
+    else:   # ENet
+        ...
 
-    weight[19] = 0
-
-    assert os.path.exists(args.datadir), "Error: datadir (dataset directory) could not be loaded"
-
-    co_transform = MyCoTransform(enc, augment=True, height=args.height)#1024)
-    co_transform_val = MyCoTransform(enc, augment=False, height=args.height)#1024)
+    # Dataset and Loader (train and validation both)
     dataset_train = cityscapes(args.datadir, co_transform, 'train')
     dataset_val = cityscapes(args.datadir, co_transform_val, 'val')
-
     loader = DataLoader(dataset_train, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     loader_val = DataLoader(dataset_val, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
-    if args.cuda:
-        weight = weight.cuda()
+    # TODO: dinamically calculations of weights instead of hardcoded ones.
+    weight = None   # for BiSeNet
+    if weight is not None:
+        if args.cuda:
+            weight = weight.cuda()
+    
+    # Loss function
     criterion = CrossEntropyLoss2d(weight)
     print(type(criterion))
 
     savedir = f'../save/{args.savedir}'
 
+    # Encoder/Decoder part
     if (enc):
         automated_log_path = savedir + "/automated_log_encoder.txt"
         modeltxtpath = savedir + "/model_encoder.txt"
@@ -107,7 +85,7 @@ def train(args, model, enc=False):
         automated_log_path = savedir + "/automated_log.txt"
         modeltxtpath = savedir + "/model.txt"    
 
-    if (not os.path.exists(automated_log_path)):    #dont add first line if it exists 
+    if (not os.path.exists(automated_log_path)):    # do not add first line if it exists 
         with open(automated_log_path, "a") as myfile:
             myfile.write("Epoch\t\tTrain-loss\t\tTest-loss\t\tTrain-IoU\t\tTest-IoU\t\tlearningRate")
 
@@ -115,10 +93,8 @@ def train(args, model, enc=False):
         myfile.write(str(model))
 
 
-    #TODO: reduce memory in first gpu: https://discuss.pytorch.org/t/multi-gpu-training-memory-usage-in-balance/4163/4        #https://github.com/pytorch/pytorch/issues/1893
-
-    #optimizer = Adam(model.parameters(), 5e-4, (0.9, 0.999),  eps=1e-08, weight_decay=2e-4)     ## scheduler 1
-    optimizer = Adam(model.parameters(), 5e-4, (0.9, 0.999),  eps=1e-08, weight_decay=1e-4)      ## scheduler 2
+    # Optimizer
+    optimizer = Adam(model.parameters(), 5e-4, (0.9, 0.999),  eps=1e-08, weight_decay=1e-4)     
 
     start_epoch = 1
     if args.resume:
@@ -136,17 +112,18 @@ def train(args, model, enc=False):
         best_acc = checkpoint['best_acc']
         print("=> Loaded checkpoint at epoch {})".format(checkpoint['epoch']))
 
-    #scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5) # set up scheduler     ## scheduler 1
-    lambda1 = lambda epoch: pow((1-((epoch-1)/args.num_epochs)),0.9)  ## scheduler 2
+    # Learning Rate Scheduler
+    lambda1 = lambda epoch: pow((1-((epoch-1)/args.num_epochs)),0.9) 
     scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)                             ## scheduler 2
 
+    # Model visualization
     if args.visualize and args.steps_plot > 0:
         board = Dashboard(args.port)
 
     for epoch in range(start_epoch, args.num_epochs+1):
         print("----- TRAINING - EPOCH", epoch, "-----")
 
-        scheduler.step(epoch)    ## scheduler 2
+        scheduler.step(epoch)
 
         epoch_loss = []
         time_train = []
@@ -164,12 +141,8 @@ def train(args, model, enc=False):
 
         model.train()
         for step, (images, labels) in enumerate(loader):
-
             start_time = time.time()
-            #print (labels.size())
-            #print (np.unique(labels.numpy()))
-            #print("labels: ", np.unique(labels[0].numpy()))
-            #labels = torch.ones(4, 1, 512, 1024).long()
+
             if args.cuda:
                 images = images.cuda()
                 labels = labels.cuda()
@@ -177,8 +150,6 @@ def train(args, model, enc=False):
             inputs = Variable(images)
             targets = Variable(labels)
             outputs = model(inputs, only_encode=enc)
-
-            #print("targets", np.unique(targets[:, 0].cpu().data.numpy()))
 
             optimizer.zero_grad()
             loss = criterion(outputs, targets[:, 0])
@@ -189,20 +160,14 @@ def train(args, model, enc=False):
             time_train.append(time.time() - start_time)
 
             if (doIouTrain):
-                #start_time_iou = time.time()
                 iouEvalTrain.addBatch(outputs.max(1)[1].unsqueeze(1).data, targets.data)
-                #print ("Time to add confusion matrix: ", time.time() - start_time_iou)      
-
-            #print(outputs.size())
+                
             if args.visualize and args.steps_plot > 0 and step % args.steps_plot == 0:
                 start_time_plot = time.time()
                 image = inputs[0].cpu().data
-                #image[0] = image[0] * .229 + .485
-                #image[1] = image[1] * .224 + .456
-                #image[2] = image[2] * .225 + .406
-                #print("output", np.unique(outputs[0].cpu().max(0)[1].data.numpy()))
+                
                 board.image(image, f'input (epoch: {epoch}, step: {step})')
-                if isinstance(outputs, list):   #merge gpu tensors
+                if isinstance(outputs, list):   # merge gpu tensors
                     board.image(color_transform(outputs[0][0].cpu().max(0)[1].data.unsqueeze(0)),
                     f'output (epoch: {epoch}, step: {step})')
                 else:
@@ -225,7 +190,7 @@ def train(args, model, enc=False):
             iouStr = getColorEntry(iouTrain)+'{:0.2f}'.format(iouTrain*100) + '\033[0m'
             print ("EPOCH IoU on TRAIN set: ", iouStr, "%")  
 
-        #Validate on 500 val images after each epoch of training
+        # Validate on 500 val images after each epoch of training
         print("----- VALIDATING - EPOCH", epoch, "-----")
         model.eval()
         epoch_loss_val = []
@@ -249,7 +214,7 @@ def train(args, model, enc=False):
             time_val.append(time.time() - start_time)
 
 
-            #Add batch to calculate TP, FP and FN for iou estimation
+            # Add batch to calculate TP, FP and FN for iou estimation
             if (doIouVal):
                 #start_time_iou = time.time()
                 iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, targets.data)
@@ -312,9 +277,11 @@ def train(args, model, enc=False):
         else:
             filename = f'{savedir}/model-{epoch:03}.pth'
             filenamebest = f'{savedir}/model_best.pth'
+
         if args.epochs_save > 0 and step > 0 and step % args.epochs_save == 0:
             torch.save(model.state_dict(), filename)
             print(f'save: {filename} (epoch: {epoch})')
+
         if (is_best):
             torch.save(model.state_dict(), filenamebest)
             print(f'save: {filenamebest} (epoch: {epoch})')
@@ -348,15 +315,17 @@ def main(args):
     with open(savedir + '/opts.txt', "w") as myfile:
         myfile.write(str(args))
 
-    #Load Model
+    # Load Model
     assert os.path.exists(args.model + ".py"), "Error: model definition not found"
     model_file = importlib.import_module(args.model)
+
     if args.model == "erfnet":
         model = model_file.ErfNet(NUM_CLASSES)
     elif args.model == "bisenet":
         model = model_file.BiSeNet(NUM_CLASSES)
-    else:
+    else:   # ENet
         model = model_file.ENet(NUM_CLASSES)
+        
     copyfile(args.model + ".py", savedir + '/' + args.model + ".py")
     
     if args.cuda:
