@@ -6,7 +6,7 @@ from torchvision.transforms import ToTensor
 
 
 #Augmentations - different function implemented to perform random augments on both image and target
-class MyCoTransform(object):
+class ErfNetTransform(object):
     def __init__(self, enc, augment=True, height=512):
         self.enc=enc
         self.augment = augment

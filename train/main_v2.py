@@ -23,6 +23,9 @@ import importlib
 from iouEval import iouEval, getColorEntry
 from shutil import copyfile
 
+# import augmentations transformations and loss functions
+from train.utils.augmentations import ErfNetTransform
+
 NUM_CHANNELS = 3
 NUM_CLASSES = 20 # cityscapes 19 classes + void
 
