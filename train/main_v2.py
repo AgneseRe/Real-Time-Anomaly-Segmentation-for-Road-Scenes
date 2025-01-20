@@ -25,16 +25,21 @@ from shutil import copyfile
 
 # import augmentations transformations and loss functions
 from utils.augmentations import ErfNetTransform
-from utils.losses.ce_loss import CrossEntropyLoss2d
+from utils.losses.focal_loss import FocalLoss
 from utils.losses.ohem_ce_loss import OhemCELoss
+from utils.losses.ce_loss import CrossEntropyLoss2d
+from utils.losses.logit_norm_loss import LogitNormLoss
+
+from utils.weights import calculate_enet_weights
+
 
 NUM_CHANNELS = 3
-NUM_CLASSES = 20 # cityscapes 19 classes + void
+NUM_CLASSES = 20 # cityscapes dataset (19 + 1)
 
 color_transform = Colorize(NUM_CLASSES)
 image_transform = ToPILImage()
 
-
+# ========== TRAIN FUNCTION ==========
 def train(args, model, enc=False):
     """
     Train a deep learning model using the Cityscapes dataset.
@@ -65,7 +70,7 @@ def train(args, model, enc=False):
     loader = DataLoader(dataset_train, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     loader_val = DataLoader(dataset_val, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
-    # TODO: dinamically calculations of weights instead of hardcoded ones.
+    # Calculate weights of the model
     weight = None   # for BiSeNet
     if weight is not None:
         if args.cuda:
