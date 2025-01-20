@@ -99,7 +99,8 @@ def train(args, model, enc=False):
         print(f"ErfNet criterion: {type(criterion)}")
     elif args.model == "enet":
         criterion = CrossEntropyLoss2d(weights)
-    else:   # BiSeNet
+    else:   # BiSeNet 
+        # hard examples loss value greater than 0.7 by default
         criterion_principal = OhemCELoss()
         criterion_aux16 = OhemCELoss()
         criterion_aux32 = OhemCELoss()
@@ -121,13 +122,26 @@ def train(args, model, enc=False):
     with open(modeltxtpath, "w") as myfile:
         myfile.write(str(model))
 
+    # TODO: finetuning
 
     # Optimizer
-    optimizer = Adam(model.parameters(), 5e-4, (0.9, 0.999),  eps=1e-08, weight_decay=1e-4)     
+    # ========== ERFNET ==========
+    # Official paper section IV Experiments: https://ieeexplore.ieee.org/document/8063438
+    # GitHub: https://github.com/Eromera/erfnet/blob/master/train/opts.lua
+    # ========== ENET ==========
+    # Official paper section 5.2 Benchmarks: https://arxiv.org/abs/1606.02147
+    # ========== BISENET ==========
+    # Official paper section 4.1 Implementation Protocol: https://arxiv.org/abs/1808.00897
+    if args.model == "erfnet":
+        optimizer = Adam(model.parameters(), lr=5e-4, betas=(0.9, 0.999), eps=1e-08, weight_decay=2e-4)
+    elif args.model == "enet":
+        optimizer = Adam(model.parameters(), lr=5e-4, weight_decay=2e-4)
+    else:   # BiSeNet
+        optimizer = SGD(model.parameters(), lr=2.5e-2, momentum=0.9, weight_decay=1e-4)
 
     start_epoch = 1
     if args.resume:
-        #Must load weights, optimizer, epoch and best value. 
+        # Must load weights, optimizer, epoch and best value. 
         if enc:
             filenameCheckpoint = savedir + '/checkpoint_enc.pth.tar'
         else:
