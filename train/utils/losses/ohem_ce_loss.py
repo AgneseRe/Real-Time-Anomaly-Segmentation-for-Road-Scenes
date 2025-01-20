@@ -40,7 +40,7 @@ class OhemCELoss(nn.Module):
     examples with a loss value greater than the threshold are used to compute the final loss.
     """
 
-    def __init__(self, thresh, lb_ignore=255):
+    def __init__(self, thresh=0.7, lb_ignore=255):
         super(OhemCELoss, self).__init__()
         self.thresh = -torch.log(torch.tensor(thresh, requires_grad=False, dtype=torch.float)).cuda()
         self.lb_ignore = lb_ignore
