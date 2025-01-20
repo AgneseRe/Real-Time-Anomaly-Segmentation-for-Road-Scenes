@@ -156,8 +156,11 @@ def train(args, model, enc=False):
         print("=> Loaded checkpoint at epoch {})".format(checkpoint['epoch']))
 
     # Learning Rate Scheduler
-    lambda1 = lambda epoch: pow((1-((epoch-1)/args.num_epochs)),0.9) 
-    scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)                             ## scheduler 2
+    if args.model == "erfnet" or args.model == "bisenet":
+        lambda1 = lambda epoch: pow((1 - ((epoch-1)/args.num_epochs)), 0.9) 
+        scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda = lambda1)
+    else:   # ENet
+        scheduler = lr_scheduler.StepLR(optimizer, 100, gamma = 0.1)
 
     # Model visualization
     if args.visualize and args.steps_plot > 0:
