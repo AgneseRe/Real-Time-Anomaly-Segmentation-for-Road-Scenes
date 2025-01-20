@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, CenterCrop, Normalize, Resize, Pad
 from torchvision.transforms import ToTensor, ToPILImage
 
-from dataset import VOC12,cityscapes
+from dataset import VOC12, cityscapes
 from transform import Relabel, ToLabel, Colorize
 from visualize import Dashboard
 
@@ -24,9 +24,9 @@ from iouEval import iouEval, getColorEntry
 from shutil import copyfile
 
 # import augmentations transformations and loss functions
-from train.utils.augmentations import ErfNetTransform
-from train.utils.losses.ce_loss import CrossEntropyLoss2d
-from train.utils.losses.ohem_ce_loss import OhemCELoss
+from utils.augmentations import ErfNetTransform
+from utils.losses.ce_loss import CrossEntropyLoss2d
+from utils.losses.ohem_ce_loss import OhemCELoss
 
 NUM_CHANNELS = 3
 NUM_CLASSES = 20 # cityscapes 19 classes + void
@@ -325,7 +325,7 @@ def main(args):
         model = model_file.BiSeNet(NUM_CLASSES)
     else:   # ENet
         model = model_file.ENet(NUM_CLASSES)
-        
+
     copyfile(args.model + ".py", savedir + '/' + args.model + ".py")
     
     if args.cuda:
