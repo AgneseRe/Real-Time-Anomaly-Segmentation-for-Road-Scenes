@@ -195,18 +195,33 @@ def train(args, model, enc=False):
 
             inputs = Variable(images)
             targets = Variable(labels)
-            outputs = model(inputs, only_encode=enc)
-
             optimizer.zero_grad()
-            loss = criterion(outputs, targets[:, 0])
+
+            if args.model == "erfnet":
+                outputs = model(inputs, only_decode = enc)
+            else:
+                outputs = model(inputs)
+
+            # compute loss (for BiSeNet combination of three components)
+            if args.model == "bisenet":
+                loss_principal = criterion_principal(outputs[0], targets[:, 0])
+                loss_aux16 = criterion_aux16(outputs[1], targets[:, 0])
+                loss_aux32 = criterion_aux32(outputs[2], targets[:, 0])
+                loss = loss_principal + loss_aux16 + loss_aux32
+            else:   # for ErfNet and ENet
+                loss = criterion(outputs, targets[:, 0])
+
             loss.backward()
             optimizer.step()
 
-            epoch_loss.append(loss.data[0])
+            epoch_loss.append(loss.data.item())
             time_train.append(time.time() - start_time)
 
             if (doIouTrain):
-                iouEvalTrain.addBatch(outputs.max(1)[1].unsqueeze(1).data, targets.data)
+                if args.model == "bisenet":
+                    iouEvalTrain.addBatch(outputs[0].max(1)[1].unsqueeze(1).data, targets.data)
+                else:
+                    iouEvalTrain.addBatch(outputs.max(1)[1].unsqueeze(1).data, targets.data)
                 
             if args.visualize and args.steps_plot > 0 and step % args.steps_plot == 0:
                 start_time_plot = time.time()
@@ -253,24 +268,38 @@ def train(args, model, enc=False):
 
             inputs = Variable(images, volatile=True)    #volatile flag makes it free backward or outputs for eval
             targets = Variable(labels, volatile=True)
-            outputs = model(inputs, only_encode=enc) 
+            
+            if args.model == "erfnet":
+                outputs = model(inputs, only_decode = enc)
+            else:
+                outputs = model(inputs)
 
-            loss = criterion(outputs, targets[:, 0])
-            epoch_loss_val.append(loss.data[0])
+            # compute loss (for BiSeNet combination of three components)
+            if args.model == "bisenet":
+                loss_principal = criterion_principal(outputs[0], targets[:, 0])
+                loss_aux16 = criterion_aux16(outputs[1], targets[:, 0])
+                loss_aux32 = criterion_aux32(outputs[2], targets[:, 0])
+                loss = loss_principal + loss_aux16 + loss_aux32
+            else:   # for ErfNet and ENet
+                loss = criterion(outputs, targets[:, 0])
+
+            epoch_loss_val.append(loss.item())
             time_val.append(time.time() - start_time)
 
 
             # Add batch to calculate TP, FP and FN for iou estimation
             if (doIouVal):
-                #start_time_iou = time.time()
-                iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, targets.data)
-                #print ("Time to add confusion matrix: ", time.time() - start_time_iou)
+                # start_time_iou = time.time()
+                if args.model == "bisenet":
+                    iouEvalVal.addBatch(outputs[0].max(1)[1].unsqueeze(1).data, targets.data)
+                else:
+                    iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, targets.data)
 
             if args.visualize and args.steps_plot > 0 and step % args.steps_plot == 0:
                 start_time_plot = time.time()
                 image = inputs[0].cpu().data
                 board.image(image, f'VAL input (epoch: {epoch}, step: {step})')
-                if isinstance(outputs, list):   #merge gpu tensors
+                if isinstance(outputs, list):   # merge gpu tensors
                     board.image(color_transform(outputs[0][0].cpu().max(0)[1].data.unsqueeze(0)),
                     f'VAL output (epoch: {epoch}, step: {step})')
                 else:
@@ -286,7 +315,6 @@ def train(args, model, enc=False):
                        
 
         average_epoch_loss_val = sum(epoch_loss_val) / len(epoch_loss_val)
-        #scheduler.step(average_epoch_loss_val, epoch)  ## scheduler 1   # update lr if needed
 
         iouVal = 0
         if (doIouVal):
@@ -308,6 +336,7 @@ def train(args, model, enc=False):
         else:
             filenameCheckpoint = savedir + '/checkpoint.pth.tar'
             filenameBest = savedir + '/model_best.pth.tar'
+
         save_checkpoint({
             'epoch': epoch + 1,
             'arch': str(model),
@@ -316,7 +345,7 @@ def train(args, model, enc=False):
             'optimizer' : optimizer.state_dict(),
         }, is_best, filenameCheckpoint, filenameBest)
 
-        #SAVE MODEL AFTER EPOCH
+        # SAVE MODEL AFTER EPOCH
         if (enc):
             filename = f'{savedir}/model_encoder-{epoch:03}.pth'
             filenamebest = f'{savedir}/model_encoder_best.pth'
@@ -374,23 +403,16 @@ def main(args):
 
     copyfile(args.model + ".py", savedir + '/' + args.model + ".py")
     
+    # weights for fine tuning 
+
     if args.cuda:
         model = torch.nn.DataParallel(model).cuda()
     
     if args.state:
-        #if args.state is provided then load this state for training
-        #Note: this only loads initialized weights. If you want to resume a training use "--resume" option!!
-        """
-        try:
-            model.load_state_dict(torch.load(args.state))
-        except AssertionError:
-            model.load_state_dict(torch.load(args.state,
-                map_location=lambda storage, loc: storage))
-        #When model is saved as DataParallel it adds a model. to each key. To remove:
-        #state_dict = {k.partition('model.')[2]: v for k,v in state_dict}
-        #https://discuss.pytorch.org/t/prefix-parameter-names-in-saved-model-if-trained-by-multi-gpu/494
-        """
-        def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict keys are there
+        # if args.state is provided then load this state for training
+        # Note: this only loads initialized weights. If you want to resume a training use "--resume" option!!
+        
+        def load_my_state_dict(model, state_dict):  # custom function to load model when not all dict keys are there
             own_state = model.state_dict()
             for name, param in state_dict.items():
                 if name not in own_state:
@@ -401,30 +423,6 @@ def main(args):
         #print(torch.load(args.state))
         model = load_my_state_dict(model, torch.load(args.state))
 
-    """
-    def weights_init(m):
-        classname = m.__class__.__name__
-        if classname.find('Conv') != -1:
-            #m.weight.data.normal_(0.0, 0.02)
-            n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-            m.weight.data.normal_(0, math.sqrt(2. / n))
-        elif classname.find('BatchNorm') != -1:
-            #m.weight.data.normal_(1.0, 0.02)
-            m.weight.data.fill_(1)
-            m.bias.data.fill_(0)
-
-    #TO ACCESS MODEL IN DataParallel: next(model.children())
-    #next(model.children()).decoder.apply(weights_init)
-    #Reinitialize weights for decoder
-    
-    next(model.children()).decoder.layers.apply(weights_init)
-    next(model.children()).decoder.output_conv.apply(weights_init)
-
-    #print(model.state_dict())
-    f = open('weights5.txt', 'w')
-    f.write(str(model.state_dict()))
-    f.close()
-    """
 
     #train(args, model)
     if (not args.decoder):
@@ -475,7 +473,8 @@ if __name__ == '__main__':
     parser.add_argument('--iouVal', action='store_true', default=True)  
     parser.add_argument('--resume', action='store_true')    # Use this flag to load last checkpoint for training  
 
-    parser.add_argument('--loss', default='ce')
+    parser.add_argument('--loss', default='ce') # ["ce", "focal"]
+    parser.add_argument('--logit_norm', action='store_true', default=False)
     parser.add_argument('--loadWeights', default='erfnet_pretrained.pth')
 
     main(parser.parse_args())
