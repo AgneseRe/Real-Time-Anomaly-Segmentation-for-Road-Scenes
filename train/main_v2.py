@@ -85,10 +85,24 @@ def train(args, model, enc=False):
     if weights is not None:
         if args.cuda:
             weights = weights.cuda()
+            print(weights)
     
     # Loss function
-    criterion = CrossEntropyLoss2d(weight)
-    print(type(criterion))
+    if args.model == "erfnet":
+        if args.loss == "ce":   # Cross Entropy Loss
+            criterion = CrossEntropyLoss2d(weights)
+        elif args.loss == "focal":  # Focal Loss
+            criterion = FocalLoss()
+        
+        if args.logit_norm: # Logit Normalization
+            criterion = LogitNormLoss(loss_function = criterion)
+        print(f"ErfNet criterion: {type(criterion)}")
+    elif args.model == "enet":
+        criterion = CrossEntropyLoss2d(weights)
+    else:   # BiSeNet
+        criterion_principal = OhemCELoss()
+        criterion_aux16 = OhemCELoss()
+        criterion_aux32 = OhemCELoss()
 
     savedir = f'../save/{args.savedir}'
 
@@ -434,7 +448,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=6)
     parser.add_argument('--steps-loss', type=int, default=50)
     parser.add_argument('--steps-plot', type=int, default=50)
-    parser.add_argument('--epochs-save', type=int, default=0)    #You can use this value to save model every X epochs
+    parser.add_argument('--epochs-save', type=int, default=0)    # You can use this value to save model every X epochs
     parser.add_argument('--savedir', required=True)
     parser.add_argument('--decoder', action='store_true')
     parser.add_argument('--pretrainedEncoder') #, default="../trained_models/erfnet_encoder_pretrained.pth.tar")
@@ -442,8 +456,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--iouTrain', action='store_true', default=False) #recommended: False (takes more time to train otherwise)
     parser.add_argument('--iouVal', action='store_true', default=True)  
-    parser.add_argument('--resume', action='store_true')    #Use this flag to load last checkpoint for training  
+    parser.add_argument('--resume', action='store_true')    # Use this flag to load last checkpoint for training  
 
+    parser.add_argument('--loss', default='ce')
     parser.add_argument('--loadWeights', default='erfnet_pretrained.pth')
 
     main(parser.parse_args())
