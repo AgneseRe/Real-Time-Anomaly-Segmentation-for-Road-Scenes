@@ -30,8 +30,8 @@ from utils.losses.ohem_ce_loss import OhemCELoss
 from utils.losses.ce_loss import CrossEntropyLoss2d
 from utils.losses.logit_norm_loss import LogitNormLoss
 
-from utils.weights import calculate_enet_weights
-
+# import functions for weights computation
+from utils.weights import calculate_enet_weights, calculate_erfnet_weights
 
 NUM_CHANNELS = 3
 NUM_CLASSES = 20 # cityscapes dataset (19 + 1)
@@ -70,11 +70,21 @@ def train(args, model, enc=False):
     loader = DataLoader(dataset_train, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     loader_val = DataLoader(dataset_val, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
-    # Calculate weights of the model
-    weight = None   # for BiSeNet
-    if weight is not None:
+    # Calculate weights of the model (torch tensor)
+    if args.model == "erfnet":
+        weights = calculate_erfnet_weights(enc, NUM_CLASSES)
+    elif args.model == "enet":
+        if os.path.exists("./utils/enet_weights.npy"):
+            weights = torch.tensor(np.load("./utils/enet_weights.npy"))
+        else:
+            weights = calculate_enet_weights(loader, NUM_CLASSES)
+            np.save("./utils/enet_weights.npy", weights.numpy())    
+    else:   # BiSeNet
+        weights = None
+
+    if weights is not None:
         if args.cuda:
-            weight = weight.cuda()
+            weights = weights.cuda()
     
     # Loss function
     criterion = CrossEntropyLoss2d(weight)
