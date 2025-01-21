@@ -1,22 +1,28 @@
-import random
-from PIL import Image, ImageOps
-import numpy as np
+import cv2
 import torch
-
-from transform import Relabel, ToLabel
+import random
+import numpy as np
 import torchvision.transforms.functional as TF
-from torchvision.transforms import Pad, RandomCrop
+
+from PIL import Image, ImageOps
+from transform import Relabel, ToLabel
 from torchvision.transforms import Resize
 from torchvision.transforms import ToTensor
+from torchvision.transforms import Pad, RandomCrop
 
 
-#Augmentations - different function implemented to perform random augments on both image and target
+# Augmentations
 class ErfNetTransform(object):
+    """
+    Different functions implemented to perform random augments on both image 
+    and target for ErfNet model (e.g. resize, horizontal flip, traslations, ...)
+    """
     def __init__(self, enc, augment=True, height=512):
         self.enc=enc
         self.augment = augment
         self.height = height
         pass
+
     def __call__(self, input, target):
         # do something to both images
         input =  Resize(self.height, Image.BILINEAR)(input)
@@ -44,63 +50,90 @@ class ErfNetTransform(object):
         target = ToLabel()(target)
 
 class BiSeNetTransform(object):
-    def __init__(self, height=512, width=1024, 
-        mean=np.array([0.28689554, 0.32513303, 0.28389177]), 
-        std=np.array([0.18696375, 0.19017339, 0.18720214]), 
-        mode='train'):
-        self.mode = mode
-        self.height = height
-        self.width = width
-        self.scales = (0.75, 1.0, 1.5, 1.75, 2.0)
-        self.mean = mean
-        self.std = std
+    """
+    Different functions implemented to perform random augments on both image 
+    and target for BiSeNet model (e.g. resize, crops, horizontal flip, rotations, ...)
+    """
+    def __init__(self, scales=(0.5, 1.5), crop_size=(512, 512), p_rotation=.5):
+        self.scales = scales
+        self.crop_size = crop_size
+        self.p_rotation = p_rotation
 
-    def __call__(self, input, target):
-        input = self.preprocess_image(input, Image.BILINEAR)
-        target = self.preprocess_image(target, Image.NEAREST)
+    def __call__(self, img, mask):
+        # Random resize
+        scale = random.uniform(*self.scales)
+        img, mask = self.resize(img, mask, scale)
 
-        if self.mode == 'train':
-            input, target = self.augment_images(input, target)
+        # Random crop
+        img, mask = self.random_crop(img, mask)
 
-        target = self.label_transform(target)
+        # Random rotation
+        if random.random() < self.p_rotation:
+            angle = random.uniform(-15, 15)  # Rotate between -15 and 15 degrees
+            img, mask = self.rotate(img, mask, angle)
 
-        return input, target
+        # Random horizontal flip
+        if random.random() < 0.5:
+            img = img[:, ::-1, :]
+            mask = mask[:, ::-1]
 
-    def preprocess_image(self, image, interpolation):
-        image = Resize(self.height, interpolation, antialias=True)(image)
-        image = np.asarray(image).astype(np.float32) / 255.0
-        image = (image - self.mean) / self.std
-        return torch.from_numpy(image.transpose(2, 0, 1)).float()
+        # Normalize and convert to tensor
+        img = self.to_tensor(img)
+        mask = torch.tensor(mask, dtype=torch.long)
 
-    def augment_images(self, input, target):
-        if random.random() > 0.5:
-            input = TF.hflip(input)
-            target = TF.hflip(target)
-        scale = random.choice(self.scales)
-        size = int(scale * self.height)
-        input = Resize(size, Image.BILINEAR, antialias=True)(input)
-        target = Resize(size, Image.NEAREST, antialias=True)(target)
-        if scale == 0.75:
-            padding = (128, 256)
-            input = Pad(padding, fill=0, padding_mode='constant')(input)
-            target = Pad(padding, fill=255, padding_mode='constant')(target)
-        i, j, h, w = RandomCrop.get_params(input, output_size=(self.height, self.width))
-        input = TF.crop(input, i, j, h, w)
-        target = TF.crop(target, i, j, h, w)
-        return input, target
+        return img, mask
 
-    def label_transform(self, target):
-        target = ToLabel()(target)
-        return Relabel(255, 19)(target)
+    def resize(self, img, mask, scale):
+        """ Resize the image and mask using a given scale. """
+        new_h = int(img.shape[0] * scale)
+        new_w = int(img.shape[1] * scale)
+        img_resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+        mask_resized = cv2.resize(mask, (new_w, new_h), interpolation=cv2.INTER_NEAREST)
+        return img_resized, mask_resized
+
+    def random_crop(self, img, mask):
+        """ Randomly crop the image and mask to the specified size. """
+        h, w, _ = img.shape
+        crop_h, crop_w = self.crop_size
+        if h < crop_h or w < crop_w:
+            # Pad if the image is smaller than the crop size
+            pad_h = max(crop_h - h, 0)
+            pad_w = max(crop_w - w, 0)
+            img = np.pad(img, ((0, pad_h), (0, pad_w), (0, 0)), mode='constant', constant_values=0)
+            mask = np.pad(mask, ((0, pad_h), (0, pad_w)), mode='constant', constant_values=255)
+
+        h, w, _ = img.shape
+        top = random.randint(0, h - crop_h)
+        left = random.randint(0, w - crop_w)
+
+        img_cropped = img[top:top+crop_h, left:left+crop_w, :]
+        mask_cropped = mask[top:top+crop_h, left:left+crop_w]
+        return img_cropped, mask_cropped
+
+    def rotate(self, img, mask, angle):
+        """ Rotate the image and mask by a given angle. """
+        h, w = img.shape[:2]
+        center = (w // 2, h // 2)
+        rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+        img_rotated = cv2.warpAffine(img, rotation_matrix, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+        mask_rotated = cv2.warpAffine(mask, rotation_matrix, (w, h), flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT, borderValue=255)
+        return img_rotated, mask_rotated
+
+    def to_tensor(self, img):
+        """ Convert image to tensor format. """
+        img = img.transpose(2, 0, 1).astype(np.float32) / 255.0  # Normalize to [0, 1]
+        return torch.tensor(img)
     
 class ENetTransform(object):
-    def __init__(self, enc, augment=True, height=512):
-        self.enc = enc
+    """
+    Different functions implemented to perform random augments on both image 
+    and target for ENet model (e.g. resize, horizontal flip, rotations, ...)
+    """
+    def __init__(self, augment=True, height=512):
         self.augment = augment
         self.height = height
 
     def __call__(self, input, target):
-        # do something to both images
         input = Resize(self.height, Image.BILINEAR)(input)
         target = Resize(self.height, Image.NEAREST)(target)
 
@@ -117,7 +150,6 @@ class ENetTransform(object):
             target = target.rotate(angle, resample=Image.NEAREST)
 
         input = ToTensor()(input)
-        if self.enc:
-            target = Resize(int(self.height / 8), Image.NEAREST)(target)
         target = ToLabel()(target)
+        target = Relabel(255, 19)(target)
         return input, target

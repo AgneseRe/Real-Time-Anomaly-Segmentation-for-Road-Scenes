@@ -24,7 +24,7 @@ from iouEval import iouEval, getColorEntry
 from shutil import copyfile
 
 # import augmentations transformations and loss functions
-from utils.augmentations import ErfNetTransform, BiSeNetTransform
+from utils.augmentations import ErfNetTransform, BiSeNetTransform, ENetTransform
 from utils.losses.focal_loss import FocalLoss
 from utils.losses.ohem_ce_loss import OhemCELoss
 from utils.losses.ce_loss import CrossEntropyLoss2d
@@ -60,10 +60,11 @@ def train(args, model, enc=False):
         co_transform = ErfNetTransform(enc, augment=True, height=args.height)
         co_transform_val = ErfNetTransform(enc, augment=False, height=args.height)
     elif args.model == "bisenet":
-        co_transform = BiSeNetTransform(enc, mode='train')
-        co_transform_val = BiSeNetTransform(enc, mode='val')
+        co_transform = BiSeNetTransform()
+        co_transform_val = BiSeNetTransform()
     else:   # ENet
-        ...
+        co_transform = ENetTransform(augment=True)
+        co_transform = ENetTransform(augment=False)
 
     # Dataset and Loader (train and validation both)
     dataset_train = cityscapes(args.datadir, co_transform, 'train')
