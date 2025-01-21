@@ -92,3 +92,32 @@ class BiSeNetTransform(object):
     def label_transform(self, target):
         target = ToLabel()(target)
         return Relabel(255, 19)(target)
+    
+class ENetTransform(object):
+    def __init__(self, enc, augment=True, height=512):
+        self.enc = enc
+        self.augment = augment
+        self.height = height
+
+    def __call__(self, input, target):
+        # do something to both images
+        input = Resize(self.height, Image.BILINEAR)(input)
+        target = Resize(self.height, Image.NEAREST)(target)
+
+        if self.augment:
+            # Random hflip
+            hflip = random.random()
+            if hflip < 0.5:
+                input = input.transpose(Image.FLIP_LEFT_RIGHT)
+                target = target.transpose(Image.FLIP_LEFT_RIGHT)
+
+            # Random rotation between -10 and 10 degrees
+            angle = random.uniform(-10, 10)
+            input = input.rotate(angle, resample=Image.BILINEAR)
+            target = target.rotate(angle, resample=Image.NEAREST)
+
+        input = ToTensor()(input)
+        if self.enc:
+            target = Resize(int(self.height / 8), Image.NEAREST)(target)
+        target = ToLabel()(target)
+        return input, target
