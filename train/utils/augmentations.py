@@ -43,7 +43,7 @@ class ErfNetTransform(object):
             target = Resize(int(self.height/8), Image.NEAREST)(target)
         target = ToLabel()(target)
 
-class BiSeNetCoTransform(object):
+class BiSeNetTransform(object):
     def __init__(self, height=512, width=1024, 
         mean=np.array([0.28689554, 0.32513303, 0.28389177]), 
         std=np.array([0.18696375, 0.19017339, 0.18720214]), 
