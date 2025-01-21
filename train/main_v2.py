@@ -24,7 +24,7 @@ from iouEval import iouEval, getColorEntry
 from shutil import copyfile
 
 # import augmentations transformations and loss functions
-from utils.augmentations import ErfNetTransform
+from utils.augmentations import ErfNetTransform, BiSeNetCoTransform
 from utils.losses.focal_loss import FocalLoss
 from utils.losses.ohem_ce_loss import OhemCELoss
 from utils.losses.ce_loss import CrossEntropyLoss2d
@@ -60,7 +60,8 @@ def train(args, model, enc=False):
         co_transform = ErfNetTransform(enc, augment=True, height=args.height)
         co_transform_val = ErfNetTransform(enc, augment=False, height=args.height)
     elif args.model == "bisenet":
-        ...
+        co_transform = BiSeNetTransform(enc, augment=True, height=args.height)
+        co_transform_val = BiSeNetTransform(enc, augment=False, height=args.height)
     else:   # ENet
         ...
 
