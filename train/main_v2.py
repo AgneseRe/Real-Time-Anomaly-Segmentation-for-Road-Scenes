@@ -64,7 +64,7 @@ def train(args, model, enc=False):
         co_transform_val = BiSeNetTransform()
     else:   # ENet
         co_transform = ENetTransform(augment=True)
-        co_transform = ENetTransform(augment=False)
+        co_transform_val = ENetTransform(augment=False)
 
     # Dataset and Loader (train and validation both)
     dataset_train = cityscapes(args.datadir, co_transform, 'train')
