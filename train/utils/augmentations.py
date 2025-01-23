@@ -4,6 +4,7 @@ import random
 import numpy as np
 import torchvision.transforms.functional as TF
 
+from dataset import cityscapes
 from PIL import Image, ImageOps
 from transform import Relabel, ToLabel
 from torchvision.transforms import Resize
@@ -52,12 +53,13 @@ class ErfNetTransform(object):
 class BiSeNetTransform(object):
     """
     Different functions implemented to perform random augments on both image 
-    and target for BiSeNet model (e.g. resize, crops, horizontal flip, rotations, ...)
+    and target for BiSeNet model (e.g. mean subtraction, horizontal flip, scale, 
+    crop into fix size). As suggested in the BiSeNet official paper.
     """
-    def __init__(self, scales=(0.5, 1.5), crop_size=(512, 512), p_rotation=.5):
-        self.scales = scales
+    def __init__(self, crop_size=(512, 512), p_rotation=.5):
         self.crop_size = crop_size
         self.p_rotation = p_rotation
+        self.scales = [0.75, 1.0, 1.5, 1.75, 2]
 
     def __call__(self, img, mask):
         # Random resize
