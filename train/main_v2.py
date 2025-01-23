@@ -39,6 +39,20 @@ NUM_CLASSES = 20 # cityscapes dataset (19 + 1)
 color_transform = Colorize(NUM_CLASSES)
 image_transform = ToPILImage()
 
+# Mean computation
+def calculate_mean(dataset_path, num_workers, batch_size):
+    dataset = cityscapes(dataset_path, co_transform=None, subset='train')
+    loader = DataLoader(dataset, num_workers=num_workers, batch_size=batch_size, shuffle=True)
+
+    mean = torch.zeros(3)
+
+    for _, images in loader:
+        batch_images = images.size(0)  # (batch_size, channels, height, width)
+        total_images += batch_images
+        mean += images.mean(dim=[0, 2, 3]) * batch_images
+    
+    return (mean/total_images).tolist()
+
 # ========== TRAIN FUNCTION ==========
 def train(args, model, enc=False):
     """
@@ -55,28 +69,12 @@ def train(args, model, enc=False):
 
     assert os.path.exists(args.datadir), "Error: datadir (dataset directory) could not be loaded" 
 
-    # Mean computation
-    def calculate_mean():
-        dataset = cityscapes(args.datadir)
-        loader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
-
-        mean = 0
-
-        for _, images in loader:
-            batch_images = images.size(0)  # (batch_size, channels, height, width)
-            total_images += batch_images
-            mean += images.mean([0, 2, 3]) * batch_images
-
-        mean /= total_images
-        
-        return mean
-
     # Augmentations Transformations (different models)
     if args.model == "erfnet":
         co_transform = ErfNetTransform(enc, augment=True, height=args.height)
         co_transform_val = ErfNetTransform(enc, augment=False, height=args.height)
     elif args.model == "bisenet":
-        print(f"Mean: {calculate_mean()}")
+        # print(f"Mean: {calculate_mean(args.datadir, args.num_workers, args.batch_size)}")
         co_transform = BiSeNetTransform()
         co_transform_val = BiSeNetTransform()
     else:   # ENet
