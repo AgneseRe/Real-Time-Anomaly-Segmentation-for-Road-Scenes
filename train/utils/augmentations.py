@@ -56,10 +56,10 @@ class BiSeNetTransform(object):
     and target for BiSeNet model (e.g. mean subtraction, horizontal flip, scale, 
     crop into fix size). As suggested in the BiSeNet official paper.
     """
-    def __init__(self, crop_size = (512, 512)):
+    def __init__(self, cs_mean, crop_size = (512, 512)):
+        self.cs_mean = cs_mean
         self.crop_size = crop_size
         self.scales = [0.75, 1.0, 1.5, 1.75, 2.0]
-        self.mean = np.array([0.287, 0.325, 0.284])
 
     def __call__(self, input, target):
         input = Resize(self.crop_size[0], Image.BILINEAR, antialias=True)(input)

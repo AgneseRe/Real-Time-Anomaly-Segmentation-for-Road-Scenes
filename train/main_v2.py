@@ -39,19 +39,31 @@ NUM_CLASSES = 20 # cityscapes dataset (19 + 1)
 color_transform = Colorize(NUM_CLASSES)
 image_transform = ToPILImage()
 
-# Mean computation
-def calculate_mean(dataset_path, num_workers, batch_size):
+# Mean computation for data normalization ([0.287, 0.325, 0.284])
+def compute_cs_mean(dataset_path, num_workers, batch_size):
+    """
+    Compute per-channel pixel values mean (RGB) over all images in the train subset
+    of cityscapes. The computed mean is used to normalize the data before the training.
+
+    Parameters:
+        - dataset_path (str): The path to the Cityscapes dataset.
+        - num_workers (int): The number of workers to use for data loading.
+        - batch_size (int): The batch size to use when loading the data.
+
+    Returns:
+        list: A list of three float values representing the mean for the R, G, B channels.
+    """
     dataset = cityscapes(dataset_path, co_transform=None, subset='train')
     loader = DataLoader(dataset, num_workers=num_workers, batch_size=batch_size, shuffle=True)
 
-    mean = torch.zeros(3)
+    cs_mean = torch.zeros(3)
 
     for _, images in loader:
         batch_images = images.size(0)  # (batch_size, channels, height, width)
         total_images += batch_images
-        mean += images.mean(dim=[0, 2, 3]) * batch_images
+        cs_mean += images.mean(dim=[0, 2, 3]) * batch_images
     
-    return (mean/total_images).tolist()
+    return (cs_mean/total_images).tolist()
 
 # ========== TRAIN FUNCTION ==========
 def train(args, model, enc=False):
@@ -74,9 +86,10 @@ def train(args, model, enc=False):
         co_transform = ErfNetTransform(enc, augment=True, height=args.height)
         co_transform_val = ErfNetTransform(enc, augment=False, height=args.height)
     elif args.model == "bisenet":
-        # print(f"Mean: {calculate_mean(args.datadir, args.num_workers, args.batch_size)}")
-        co_transform = BiSeNetTransform()
-        co_transform_val = BiSeNetTransform()
+        # print(f"Mean: {compute_cs_mean(args.datadir, args.num_workers, args.batch_size)}")
+        cs_mean = compute_cs_mean(args.datadir, args.num_workers, args.batch_size)
+        co_transform = BiSeNetTransform(cs_mean)
+        co_transform_val = BiSeNetTransform(cs_mean)
     else:   # ENet
         co_transform = ENetTransform(augment=True)
         co_transform_val = ENetTransform(augment=False)
