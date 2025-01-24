@@ -23,16 +23,16 @@ import importlib
 from iouEval import iouEval, getColorEntry
 from shutil import copyfile
 
-# import augmentations transformations and loss functions
-from utils.losses.isomax_plus_loss import IsoMaxPlusLossSecondPart, IsoMaxPlusLossFirstPart
-from utils.augmentations import ErfNetTransform, BiSeNetTransform, ENetTransform
+# import loss functions
 from utils.losses.focal_loss import FocalLoss
 from utils.losses.ohem_ce_loss import OhemCELoss
 from utils.losses.ce_loss import CrossEntropyLoss2d
 from utils.losses.logit_norm_loss import LogitNormLoss
+from utils.losses.isomax_plus_loss import IsoMaxPlusLossSecondPart, IsoMaxPlusLossFirstPart
 
-# import functions for weights computation
+# import functions for weights computation and data augmentation
 from utils.weights import calculate_enet_weights, calculate_erfnet_weights
+from utils.augmentations import ErfNetTransform, BiSeNetTransform, ENetTransform
 
 NUM_CHANNELS = 3
 NUM_CLASSES = 20 # cityscapes dataset (19 + 1)
@@ -129,15 +129,14 @@ def train(args, model, enc=False):
             print(weights)
     
     # Loss function
-
     if args.model == "erfnet_isomaxplus":
-        if args.loss == "Focal":
+        if args.loss == "focal":
             criterion = FocalLoss() # IsomaxPlus loss + Focal loss
         else:
             criterion = IsoMaxPlusLossSecondPart()  # IsoMaxPlus loss + Cross Entropy loss
-    if args.model == "erfnet":
-        if args.loss == "IsoMaxPlus":
-            raise ValueError("To use IsoMaxPlus loss, please use the erfnet_isomaxplus model")
+    elif args.model == "erfnet":
+        if args.loss == "isomaxplus":
+            raise ValueError("IsoMaxPlus loss is available for the erfnet_isomaxplus model")
         if args.loss == "ce":   # Cross Entropy Loss
             criterion = CrossEntropyLoss2d(weights)
         elif args.loss == "focal":  # Focal Loss
@@ -173,7 +172,7 @@ def train(args, model, enc=False):
 
     # Finetuning
     if args.FineTune:
-        #freezing all layers except the last one
+        # freezing all layers except the last one
         for param in model.parameters():
             param.requires_grad = False
         
@@ -183,7 +182,7 @@ def train(args, model, enc=False):
         elif args.model == "enet":
             for param in model.module.transposed_conv.parameters():
                 param.requires_grad = True
-        else: #bisnet
+        else: # BiSeNet
             for param in model.module.conv_out.parameters():
                 param.requires_grad = True
         
@@ -271,7 +270,7 @@ def train(args, model, enc=False):
                 loss_aux16 = criterion_aux16(outputs[1], targets[:, 0])
                 loss_aux32 = criterion_aux32(outputs[2], targets[:, 0])
                 loss = loss_principal + loss_aux16 + loss_aux32
-            else:   # for ErfNet and ENet
+            else:   # for ErfNet (also IsoMaxPlus) and ENet
                 loss = criterion(outputs, targets[:, 0])
 
             loss.backward()
@@ -329,7 +328,7 @@ def train(args, model, enc=False):
                 images = images.cuda()
                 labels = labels.cuda()
 
-            inputs = Variable(images, volatile=True)    #volatile flag makes it free backward or outputs for eval
+            inputs = Variable(images, volatile=True)    # volatile flag makes it free backward or outputs for eval
             targets = Variable(labels, volatile=True)
             
             if args.model == "erfnet" or args.model == "erfnet_isomaxplus":
@@ -402,7 +401,8 @@ def train(args, model, enc=False):
 
         
         if args.model == "efrnet_isomaxplus":
-                save_checkpoint({
+            # only for saving also the loss first part dict
+            save_checkpoint({
                 'epoch': epoch + 1,
                 'arch': str(model),
                 'state_dict': model.state_dict(),
@@ -428,7 +428,6 @@ def train(args, model, enc=False):
             filenamebest = f'{savedir}/model_best.pth'
 
         def save_model(model, filename, save_isomax=False):
-            # Salva solo lo stato del modello
             state = {'state_dict': model.state_dict()}
             if save_isomax and hasattr(model.module.decoder, 'loss_first_part'):
                 state['loss_first_part_state_dict'] = model.module.decoder.loss_first_part.state_dict()
@@ -547,8 +546,8 @@ def main(args):
             if (not args.decoder):
                 print("========== ENCODER TRAINING ===========")
                 model = train(args, model, True) #Train encoder
-    #CAREFUL: for some reason, after training encoder alone, the decoder gets weights=0. 
-    #We must reinit decoder weights or reload network passing only encoder in order to train decoder
+            # CAREFUL: for some reason, after training encoder alone, the decoder gets weights=0. 
+            # We must reinit decoder weights or reload network passing only encoder in order to train decoder
             print("========== DECODER TRAINING ===========")
             if (not args.state):
                 if args.pretrainedEncoder:
@@ -564,7 +563,7 @@ def main(args):
                 model = model_file.Net(NUM_CLASSES, encoder=pretrainedEnc)  #Add decoder to encoder
                 if args.cuda:
                     model = torch.nn.DataParallel(model).cuda()
-                #When loading encoder reinitialize weights for decoder because they are set to 0 when training dec
+                # When loading encoder reinitialize weights for decoder because they are set to 0 when training dec
         model = train(args, model, False)   #Train decoder
     elif args.model == "bisenet" or args.model == "enet":
         model = train(args,model)   
@@ -596,7 +595,7 @@ if __name__ == '__main__':
     parser.add_argument('--iouVal', action='store_true', default=True)  
     parser.add_argument('--resume', action='store_true')    # Use this flag to load last checkpoint for training  
 
-    parser.add_argument('--loss', default='ce') # ["ce", "focal"]
+    parser.add_argument('--loss', default='ce') # ["ce", "focal", "isomaxplus"]
     parser.add_argument('--logit_norm', action='store_true', default=False)
     parser.add_argument('--FineTune', action='store_true', default=False)
     parser.add_argument('--loadWeights', default='erfnet_pretrained.pth')
