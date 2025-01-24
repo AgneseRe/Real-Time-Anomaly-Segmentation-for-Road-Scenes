@@ -55,24 +55,25 @@ def compute_cs_mean(dataset_path, num_workers, batch_size):
     """
 
     if os.path.exists("./utils/cityscapes_mean.npy"):
-      return np.load("./utils/cityscapes_mean.npy").tolist()
+        return np.load("./utils/cityscapes_mean.npy").tolist()
     else:
-      # if mean not yet computed
-      dataset = cityscapes(dataset_path, co_transform=None, subset='train')
-      loader = DataLoader(dataset, num_workers=num_workers, batch_size=batch_size, shuffle=True)
-    
-      total_images = 0  # 2795
-      cs_mean = torch.zeros(3)
+        # if mean not yet computed
+        dataset = cityscapes(dataset_path, co_transform=None, subset='train')
+        loader = DataLoader(dataset, num_workers=num_workers, batch_size=batch_size, shuffle=True)
+        
+        total_images = 0  # 2795
+        cs_mean = torch.zeros(3)
 
-      for images, _ in loader:
-        batch_images = images.size(0)  # (batch_size, channels, height, width)
-        total_images += batch_images
-        cs_mean += images.mean(dim=[0, 2, 3]) * batch_images
+        for images, _ in loader:
+            batch_images = images.size(0)  # (batch_size, channels, height, width)
+            total_images += batch_images
+            cs_mean += images.mean(dim=[0, 2, 3]) * batch_images
+        cs_mean = cs_mean / total_images
+
+        # Save mean values in file for future computation
+        np.save("./utils/cityscapes_mean.npy", cs_mean.numpy())
       
-      # Save mean values in file for future computation
-      np.save("./utils/cityscapes_mean.npy", cs_mean.numpy())
-      
-      return (cs_mean/total_images).tolist()
+        return cs_mean.tolist()
     
 
 # ========== TRAIN FUNCTION ==========
