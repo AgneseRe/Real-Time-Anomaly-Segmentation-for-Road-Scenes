@@ -67,7 +67,7 @@ class BiSeNetTransform(object):
 
         # Mean substraction
         input = np.asarray(input).astype(np.float32) / 255.0
-        input = input - self.mean
+        input = input - self.cs_mean
 
         input = torch.from_numpy(input.transpose(2, 0, 1)).float()
 

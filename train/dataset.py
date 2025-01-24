@@ -2,6 +2,8 @@ import numpy as np
 import os
 
 from PIL import Image
+from transform import Relabel, ToLabel
+from torchvision.transforms import ToTensor
 
 from torch.utils.data import Dataset
 
@@ -92,6 +94,11 @@ class cityscapes(Dataset):
 
         if self.co_transform is not None:
             image, label = self.co_transform(image, label)
+        else:   # ADDED THIS FOR INITIAL MEAN COMPUTATION
+            image = ToTensor()(image)
+            label = ToLabel()(label)
+            label = Relabel(255, 19)(label)
+            label = label.float()
 
         return image, label
 

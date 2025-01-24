@@ -39,7 +39,7 @@ NUM_CLASSES = 20 # cityscapes dataset (19 + 1)
 color_transform = Colorize(NUM_CLASSES)
 image_transform = ToPILImage()
 
-# Mean computation for data normalization ([0.287, 0.325, 0.284])
+# Mean computation for data normalization ([0.2869, 0.3251, 0.2839])
 def compute_cs_mean(dataset_path, num_workers, batch_size):
     """
     Compute per-channel pixel values mean (RGB) over all images in the train subset
@@ -53,17 +53,27 @@ def compute_cs_mean(dataset_path, num_workers, batch_size):
     Returns:
         list: A list of three float values representing the mean for the R, G, B channels.
     """
-    dataset = cityscapes(dataset_path, co_transform=None, subset='train')
-    loader = DataLoader(dataset, num_workers=num_workers, batch_size=batch_size, shuffle=True)
 
-    cs_mean = torch.zeros(3)
+    if os.path.exists("./utils/cityscapes_mean.npy"):
+      return np.load("./utils/cityscapes_mean.npy").tolist()
+    else:
+      # if mean not yet computed
+      dataset = cityscapes(dataset_path, co_transform=None, subset='train')
+      loader = DataLoader(dataset, num_workers=num_workers, batch_size=batch_size, shuffle=True)
+    
+      total_images = 0  # 2795
+      cs_mean = torch.zeros(3)
 
-    for _, images in loader:
+      for images, _ in loader:
         batch_images = images.size(0)  # (batch_size, channels, height, width)
         total_images += batch_images
         cs_mean += images.mean(dim=[0, 2, 3]) * batch_images
+      
+      # Save mean values in file for future computation
+      np.save("./utils/cityscapes_mean.npy", cs_mean)
+      
+      return (cs_mean/total_images).tolist()
     
-    return (cs_mean/total_images).tolist()
 
 # ========== TRAIN FUNCTION ==========
 def train(args, model, enc=False):
