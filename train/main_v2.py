@@ -162,8 +162,22 @@ def train(args, model, enc=False):
     with open(modeltxtpath, "w") as myfile:
         myfile.write(str(model))
 
-    # TODO: finetuning
-
+    # Finetuning
+    if args.fineTune:
+        #freezing all layers except the last one
+        for param in model.parameters():
+            param.requires_grad = False
+        
+        if args.model == "erfnet" or args.model == "erfnet_isomaxplus":
+            for param in model.module.decoder.output_conv.parameters():
+                param.requires_grad = True
+        elif args.model == "enet":
+            for param in model.module.transposed_conv.parameters():
+                param.requires_grad = True
+        else: #bisnet
+            for param in model.module.conv_out.parameters():
+                param.requires_grad = True
+        
     # Optimizer
     # ========== ERFNET ==========
     # Official paper section IV Experiments: https://ieeexplore.ieee.org/document/8063438
@@ -464,14 +478,15 @@ def main(args):
         model = load_my_state_dict(model, torch.load(args.state))
 
 
-    #train(args, model)
+    print("========== TRAINING ===========")
+
     if (not args.decoder):
         print("========== ENCODER TRAINING ===========")
         model = train(args, model, True) #Train encoder
     #CAREFUL: for some reason, after training encoder alone, the decoder gets weights=0. 
     #We must reinit decoder weights or reload network passing only encoder in order to train decoder
     print("========== DECODER TRAINING ===========")
-    if (not args.state):
+    if (not args.state) and (args.model=='erfnet'):
         if args.pretrainedEncoder:
             print("Loading encoder pretrained in imagenet")
             from erfnet_imagenet import ERFNet as ERFNet_imagenet
@@ -515,6 +530,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--loss', default='ce') # ["ce", "focal"]
     parser.add_argument('--logit_norm', action='store_true', default=False)
+    parser.add_argument('--fineTune', action='store_true', default=False)
     parser.add_argument('--loadWeights', default='erfnet_pretrained.pth')
 
     main(parser.parse_args())
