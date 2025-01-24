@@ -65,7 +65,7 @@ class BiSeNetTransform(object):
         input = Resize(self.crop_size[0], Image.BILINEAR, antialias=True)(input)
         target = Resize(self.crop_size[0], Image.NEAREST, antialias=True)(target)
 
-        # Mean substraction
+        # Mean substraction (input between 0 and 1)
         input = np.asarray(input).astype(np.float32) / 255.0
         input = input - self.cs_mean
 
@@ -76,11 +76,12 @@ class BiSeNetTransform(object):
             input = TF.hflip(input)
             target = TF.hflip(target)
 
-        # Apply scale
+        # Apply random scale
         scale = random.choice(self.scales)
         size = int(scale * self.crop_size[0])
         input = Resize(size, Image.BILINEAR, antialias=True)(input)
         target = Resize(size, Image.NEAREST, antialias=True)(target)
+        
         if scale == 0.75:
             padding = 128, 128
             input = Pad(padding, fill=0, padding_mode='constant')(input)

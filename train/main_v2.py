@@ -97,7 +97,6 @@ def train(args, model, enc=False):
         co_transform = ErfNetTransform(enc, augment=True, height=args.height)
         co_transform_val = ErfNetTransform(enc, augment=False, height=args.height)
     elif args.model == "bisenet":
-        # print(f"Mean: {compute_cs_mean(args.datadir, args.num_workers, args.batch_size)}")
         cs_mean = compute_cs_mean(args.datadir, args.num_workers, args.batch_size)
         co_transform = BiSeNetTransform(cs_mean)
         co_transform_val = BiSeNetTransform(cs_mean)
