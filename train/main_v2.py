@@ -514,15 +514,12 @@ def main(args):
                         print(f"Size mismatch for {stripped_name}: {own_state[stripped_name].size()} vs {param.size()}")
                 else:
                     print(f"Skipping {name} as {stripped_name} is not in the model's state dict")
-            
             return model
-        
-    if args.model == "enet":
-        model = load_my_state_dict(model, torch.load(weightspath, map_location="cpu")["state_dict"])
-    else:
-        model = load_my_state_dict(model, torch.load(weightspath, map_location="cpu"))
-
-    print(f"Import Model {args.model} with weights {args.loadWeights} to FineTune")
+        if args.model == "enet":
+          model = load_my_state_dict(model, torch.load(weightspath, map_location="cpu")["state_dict"])
+        else:
+          model = load_my_state_dict(model, torch.load(weightspath, map_location="cpu"))
+        print(f"Import Model {args.model} with weights {args.loadWeights} to FineTune")
 
 
     if args.cuda:
