@@ -2,9 +2,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
+# Code: https://github.com/dlmacedo/entropic-out-of-distribution-detection/blob/9ad451ca815160e5339dc21319cea2b859e3e101/losses/isomaxplus.py
 
 class IsoMaxPlusLossFirstPart(nn.Module):
-    """This part replaces the model classifier output layer nn.Linear()"""
+    """ This part replaces the model classifier output layer nn.Linear() """
     def __init__(self, num_features, num_classes, temperature=1.0):
         super(IsoMaxPlusLossFirstPart, self).__init__()
         self.num_features = num_features
@@ -23,7 +24,7 @@ class IsoMaxPlusLossFirstPart(nn.Module):
 
 
 class IsoMaxPlusLossSecondPart(nn.Module):
-    """This part replaces the nn.CrossEntropyLoss()"""
+    """ This part replaces the nn.CrossEntropyLoss() """
     def __init__(self, entropic_scale=10.0):
         super(IsoMaxPlusLossSecondPart, self).__init__()
         self.entropic_scale = entropic_scale
