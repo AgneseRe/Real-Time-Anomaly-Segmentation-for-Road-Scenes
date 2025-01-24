@@ -70,7 +70,7 @@ def compute_cs_mean(dataset_path, num_workers, batch_size):
         cs_mean += images.mean(dim=[0, 2, 3]) * batch_images
       
       # Save mean values in file for future computation
-      np.save("./utils/cityscapes_mean.npy", cs_mean)
+      np.save("./utils/cityscapes_mean.npy", cs_mean.numpy())
       
       return (cs_mean/total_images).tolist()
     
