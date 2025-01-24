@@ -8,6 +8,8 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
 
+from utils.losses.isomax_plus_loss import IsoMaxPlusLossSecondPart, IsoMaxPlusLossFirstPart
+
 class DownsamplerBlock (nn.Module):
     def __init__(self, ninput, noutput):
         super().__init__()
@@ -57,7 +59,7 @@ class non_bottleneck_1d (nn.Module):
         if (self.dropout.p != 0):
             output = self.dropout(output)
         
-        return F.relu(output+input)    #+input = identity (residual connection)
+        return F.relu(output+input)    # +input = identity (residual connection)
 
 
 class Encoder(nn.Module):
@@ -69,18 +71,18 @@ class Encoder(nn.Module):
 
         self.layers.append(DownsamplerBlock(16,64))
 
-        for x in range(0, 5):    #5 times
+        for x in range(0, 5):    # 5 times
            self.layers.append(non_bottleneck_1d(64, 0.03, 1)) 
 
         self.layers.append(DownsamplerBlock(64,128))
 
-        for x in range(0, 2):    #2 times
+        for x in range(0, 2):    # 2 times
             self.layers.append(non_bottleneck_1d(128, 0.3, 2))
             self.layers.append(non_bottleneck_1d(128, 0.3, 4))
             self.layers.append(non_bottleneck_1d(128, 0.3, 8))
             self.layers.append(non_bottleneck_1d(128, 0.3, 16))
 
-        #Only in encoder mode:
+        # Only in encoder mode:
         self.output_conv = nn.Conv2d(128, num_classes, 1, stride=1, padding=0, bias=True)
 
     def forward(self, input, predict=False):
@@ -107,8 +109,10 @@ class UpsamplerBlock (nn.Module):
         return F.relu(output)
 
 class Decoder (nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, use_isomaxplus = False):
         super().__init__()
+        if use_isomaxplus:
+            self.loss_first_part = IsoMaxPlusLossFirstPart(num_classes, num_classes)
 
         self.layers = nn.ModuleList()
 
@@ -130,18 +134,22 @@ class Decoder (nn.Module):
 
         output = self.output_conv(output)
 
+        if hasattr(self, 'loss_first_part'):
+            # Apply IsoMaxPlusLossFirstPart
+            output = self.loss_first_part(output)
+
         return output
 
-#ERFNet
+# ERFNet
 class ErfNet(nn.Module):
-    def __init__(self, num_classes, encoder=None):  #use encoder to pass pretrained encoder
+    def __init__(self, num_classes, encoder=None, use_isomaxplus = False):  # use encoder to pass pretrained encoder
         super().__init__()
 
         if (encoder == None):
             self.encoder = Encoder(num_classes)
         else:
             self.encoder = encoder
-        self.decoder = Decoder(num_classes)
+        self.decoder = Decoder(num_classes, use_isomaxplus)
 
     def forward(self, input, only_encode=False):
         if only_encode:
