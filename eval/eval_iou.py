@@ -19,9 +19,15 @@ from torchvision.transforms import Compose, CenterCrop, Normalize, Resize
 from torchvision.transforms import ToTensor, ToPILImage
 
 from dataset import cityscapes
-from erfnet import ERFNet
+#from erfnet import ERFNet
 from transform import Relabel, ToLabel, Colorize
 from iouEval import iouEval, getColorEntry
+
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ERFNet = importlib.import_module('train.erfnet').ErfNet
+ENet = importlib.import_module('train.enet').ENet
+BiSeNetV1 = importlib.import_module('train.bisenet').BiSeNet
 
 NUM_CHANNELS = 3
 NUM_CLASSES = 20
@@ -44,14 +50,21 @@ def main(args):
 
     print ("Loading model: " + modelpath)
     print ("Loading weights: " + weightspath)
-
-    model = ERFNet(NUM_CLASSES)
+    device = torch.device('cuda' if torch.cuda.is_available() and not args.cpu else 'cpu')
+    if args.model == "erfnet":
+      model = ERFNet(NUM_CLASSES).to(device)
+    elif args.model == "erfnet_isomaxplus":
+      model = ERFNet(NUM_CLASSES, use_isomaxplus=True).to(device)
+    elif args.model =="enet":
+        model = ENet(NUM_CLASSES).to(device)
+    elif args.model == "bisenet":
+        model = BiSeNetV1(NUM_CLASSES).to(device)
 
     #model = torch.nn.DataParallel(model)
     if (not args.cpu):
         model = torch.nn.DataParallel(model).cuda()
 
-    def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
+    '''def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
         own_state = model.state_dict()
         for name, param in state_dict.items():
             if name not in own_state:
@@ -62,8 +75,37 @@ def main(args):
                     continue
             else:
                 own_state[name].copy_(param)
-        return model
+        return model'''
+    def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
+        own_state = model.state_dict()
+        print(state_dict.keys())
+        print(own_state.keys())
+        # Check if the model is 'erfnet_isomaxplus'and load the state dict for IsoMaxPlusLossFirstPart
+        if args.model == "erfnet_isomaxplus" and 'loss_first_part_state_dict' in state_dict:
+            # Get the state dict for IsoMaxPlusLossFirstPart
+            loss_first_part_state_dict = state_dict['loss_first_part_state_dict']
+            # Load the state dict for IsoMaxPlusLossFirstPart
+            if hasattr(model.module.decoder, 'loss_first_part'):
+                model.module.decoder.loss_first_part.load_state_dict(loss_first_part_state_dict)
+            else:
+                raise ValueError("IsoMaxPlusLossFirstPart not found in the model")
 
+        if 'state_dict' in state_dict:
+            load_dict = state_dict['state_dict'] 
+        else:
+            load_dict = state_dict
+
+        for name, param in load_dict.items():
+            if name not in own_state:
+                if name.startswith("module."):
+                    own_state[name.split("module.")[-1]].copy_(param)
+                else:
+                    print(name, " not loaded")
+                    continue
+            else:
+                own_state[name].copy_(param)
+        return model
+    weightspath = args.loadDir + args.loadWeights
     model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
     print ("Model and weights LOADED successfully")
 
@@ -144,6 +186,7 @@ if __name__ == '__main__':
     parser.add_argument('--datadir', default="/home/shyam/ViT-Adapter/segmentation/data/cityscapes/")
     parser.add_argument('--num-workers', type=int, default=4)
     parser.add_argument('--batch-size', type=int, default=1)
+    parser.add_argument('--model', default="erfnet") #can be erfnet, erfnet_isomaxplus, enet, bisenet
     parser.add_argument('--cpu', action='store_true')
 
     main(parser.parse_args())
