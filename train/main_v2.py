@@ -231,7 +231,8 @@ def train(args, model, enc=False):
     for epoch in range(start_epoch, args.num_epochs+1):
         print("----- TRAINING - EPOCH", epoch, "-----")
 
-        scheduler.step(epoch)
+        # scheduler.step(epoch)     UserWarning: The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible
+        scheduler.step()
 
         epoch_loss = []
         time_train = []
@@ -581,7 +582,7 @@ if __name__ == '__main__':
     parser.add_argument('--datadir', default=os.getenv("HOME") + "/datasets/cityscapes/")
     parser.add_argument('--height', type=int, default=512)
     parser.add_argument('--num-epochs', type=int, default=150)
-    parser.add_argument('--num-workers', type=int, default=4)
+    parser.add_argument('--num-workers', type=int, default=2)   # 4
     parser.add_argument('--batch-size', type=int, default=6)
     parser.add_argument('--steps-loss', type=int, default=50)
     parser.add_argument('--steps-plot', type=int, default=50)
