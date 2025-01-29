@@ -48,7 +48,9 @@ class ErfNetTransform(object):
         if (self.enc):
             target = Resize(int(self.height/8), Image.NEAREST)(target)
         target = ToLabel()(target)
+        target = Relabel(255, 19)(target)
 
+        return input, target
 
 class BiSeNetTransform(object):
     """
