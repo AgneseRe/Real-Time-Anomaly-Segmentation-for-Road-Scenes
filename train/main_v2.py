@@ -264,7 +264,7 @@ def train(args, model, enc=False):
             optimizer.zero_grad()
 
             if args.model == "erfnet" or args.model == "erfnet_isomaxplus":
-                outputs = model(inputs, only_decode = enc)
+                outputs = model(inputs, only_encode = enc)
             else:
                 outputs = model(inputs)
 
@@ -336,7 +336,7 @@ def train(args, model, enc=False):
             targets = Variable(labels, volatile=True)
             
             if args.model == "erfnet" or args.model == "erfnet_isomaxplus":
-                outputs = model(inputs, only_decode = enc)
+                outputs = model(inputs, only_encode = enc)
             else:
                 outputs = model(inputs)
 
