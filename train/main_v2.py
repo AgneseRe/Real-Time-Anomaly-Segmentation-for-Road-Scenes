@@ -516,9 +516,9 @@ def main(args):
                     print(f"Skipping {name} as {stripped_name} is not in the model's state dict")
             return model
         if args.model == "enet":
-          model = load_my_state_dict(model, torch.load(weightspath, map_location="cpu")["state_dict"])
+          model = load_my_state_dict(model, torch.load(weightspath, map_location="cpu", weights_only=True)["state_dict"])
         else:
-          model = load_my_state_dict(model, torch.load(weightspath, map_location="cpu"))
+          model = load_my_state_dict(model, torch.load(weightspath, map_location="cpu", weights_only=True))
         print(f"Import Model {args.model} with weights {args.loadWeights} to FineTune")
 
 
