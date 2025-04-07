@@ -6,6 +6,7 @@ import torch
 import random
 import numpy as np
 import os.path as osp
+import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import torchvision.transforms as T
 
@@ -99,7 +100,7 @@ def main():
         images = image_transform(Image.open(path).convert('RGB')).unsqueeze(0).float().cuda()
         with torch.no_grad():
             result = model(images).squeeze(0)
-        # print(result.shape)
+        # print(result.shape) torch.Size([20, 512, 1024])
 
         # methods
         if args.method == "void":
@@ -128,7 +129,7 @@ def main():
            pathGT = pathGT.replace("jpg", "png")  
 
         mask = Image.open(pathGT)
-        ood_gts = np.array(mask_transform(mask))
+        ood_gts = np.array(mask_transform(mask))    # (512, 1024)
 
         if "RoadAnomaly" in pathGT:
             ood_gts = np.where((ood_gts==2), 1, ood_gts)
@@ -172,6 +173,8 @@ def main():
 
     print(f'\t\tAUPRC score: {prc_auc*100.0:.3f}')
     print(f'\t\tFPR@TPR95: {fpr*100.0:.3f}')
+
+    # TODO: Draw PRC and ROC curve
 
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
