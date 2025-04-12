@@ -107,12 +107,12 @@ def main():
             anomaly_result = F.softmax(result, dim=0)[-1]
         else:
             result = result[:-1]  # remove background class
-            if args.method == "msp":
+            if args.method == "MSP":
                 softmax_probs = F.softmax(result / args.temperature, dim=0)
                 anomaly_result = 1.0 - torch.max(softmax_probs, dim=0)[0]
-            elif args.method == "maxlogit":
+            elif args.method == "MaxLogit":
                 anomaly_result = -torch.max(result, dim=0)[0]
-            elif args.method == "maxentropy":
+            elif args.method == "MaxEntropy":
                 anomaly_result = torch.div(
                     torch.sum(-F.softmax(result, dim=0) * F.log_softmax(result, dim=0), dim=0),
                     torch.log(torch.tensor(result.size(0))),
