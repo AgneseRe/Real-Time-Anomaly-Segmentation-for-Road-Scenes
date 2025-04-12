@@ -19,8 +19,8 @@ from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curv
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../train')))
 
 from erfnet import ERFNet
-from bisenet import BiSeNet
-from enet import ENet
+# from bisenet import BiSeNet
+# from enet import ENet
 
 seed = 42
 
@@ -56,7 +56,7 @@ def main():
     )  
     parser.add_argument('--loadDir',default="../trained_models/")
     parser.add_argument('--loadWeights', default="erfnet_pretrained.pth")
-    parser.add_argument('--loadModel', default="erfnet.py")
+    parser.add_argument('--loadModel', default="erfnet")
     parser.add_argument('--subset', default="val")  #can be val or train (must have labels)
     parser.add_argument('--datadir', default="/home/shyam/ViT-Adapter/segmentation/data/cityscapes/")
     parser.add_argument('--num-workers', type=int, default=4)
@@ -76,7 +76,7 @@ def main():
         open('results.txt', 'w').close()
     file = open('results.txt', 'a')
 
-    modelpath = args.loadDir + args.loadModel
+    modelpath = args.loadDir + args.loadModel + ".py"
     weightspath = args.loadDir + args.loadWeights
 
     print ("Loading model: " + modelpath)
@@ -184,7 +184,10 @@ def main():
     print(f'| AUPRC score: {prc_auc*100.0:>.3f}', end = " ")
     print(f'| FPR@TPR95: {fpr*100.0:>.3f}')
 
-    # TODO: Draw PRC and ROC curve
+    # Plot PR curve
+    if args.plotdir:
+        os.makedirs(args.plotdir, exist_ok=True)    # True to avoid OSError if target already exists
+        plot_pr(val_out, val_label, title="Precision-Recall Curve", save_path=args.plotdir, file_name=f"PR_curve_{args.method}_{args.model}")
 
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
