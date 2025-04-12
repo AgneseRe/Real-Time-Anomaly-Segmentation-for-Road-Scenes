@@ -192,6 +192,8 @@ def main():
                 file_name=f"PR_curve_{args.method}_{args.loadModel}")
         plot_roc(val_out, val_label, title="ROC Curve", save_dir=args.plotdir, 
                 file_name=f"ROC_curve_{args.method}_{args.loadModel}")
+        plot_barcode(val_out, val_label, title="Barcode Plot", save_dir=args.plotdir, 
+                file_name=f"ROC_curve_{args.method}_{args.loadModel}")
 
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
