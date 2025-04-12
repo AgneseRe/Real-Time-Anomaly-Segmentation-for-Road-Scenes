@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import sys
 import cv2
 import glob
 import torch
@@ -11,10 +12,15 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 
 from PIL import Image
-from erfnet import ERFNet
 from argparse import ArgumentParser
-from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr,plot_barcode
+from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr, plot_barcode
 from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../train')))
+
+from erfnet import ERFNet
+from bisenet import BiSeNet
+from enet import ENet
 
 seed = 42
 
@@ -25,6 +31,7 @@ torch.manual_seed(seed)
 
 NUM_CHANNELS = 3
 NUM_CLASSES = 20
+
 # gpu training specific
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = True
@@ -55,9 +62,12 @@ def main():
     parser.add_argument('--num-workers', type=int, default=4)
     parser.add_argument('--batch-size', type=int, default=1)
     parser.add_argument('--cpu', action='store_true')
+
     # new arguments
-    parser.add_argument('--method', type=str, default='msp')
+    parser.add_argument('--method', type=str, default='MSP')
     parser.add_argument('--temperature', type=float, default=1.0)
+    parser.add_argument('--plotdir', type=str, default=None)    # where to save PR curve
+
     args = parser.parse_args()  # argparse.Namespace object that contained arguments
     anomaly_score_list = []
     ood_gts_list = []
@@ -69,8 +79,8 @@ def main():
     modelpath = args.loadDir + args.loadModel
     weightspath = args.loadDir + args.loadWeights
 
-    # print ("Loading model: " + modelpath)
-    # print ("Loading weights: " + weightspath)
+    print ("Loading model: " + modelpath)
+    print ("Loading weights: " + weightspath)
 
     model = ERFNet(NUM_CLASSES) #TODO: aggiungere altri modelli
 
