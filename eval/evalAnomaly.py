@@ -72,7 +72,7 @@ def main():
     # print ("Loading model: " + modelpath)
     # print ("Loading weights: " + weightspath)
 
-    model = ERFNet(NUM_CLASSES)
+    model = ERFNet(NUM_CLASSES) #TODO: aggiungere altri modelli
 
     if (not args.cpu):
         model = torch.nn.DataParallel(model).cuda()

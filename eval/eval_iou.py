@@ -22,7 +22,7 @@ from dataset import cityscapes
 #from erfnet import ERFNet
 from transform import Relabel, ToLabel, Colorize
 from iouEval import iouEval, getColorEntry
-
+#TODO: revisionare tutto il file
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ERFNet = importlib.import_module('train.erfnet').ErfNet
