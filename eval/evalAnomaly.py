@@ -79,8 +79,8 @@ def main():
     modelpath = args.loadDir + args.loadModel + ".py"
     weightspath = args.loadDir + args.loadWeights
 
-    print ("Loading model: " + modelpath)
-    print ("Loading weights: " + weightspath)
+    # print ("Loading model: " + modelpath)         # for ERFNet ../trained_models/erfnet.py
+    # print ("Loading weights: " + weightspath)     # for ERFNet ../trained_models/erfnet_pretrained.pth
 
     model = ERFNet(NUM_CLASSES) #TODO: aggiungere altri modelli
 
@@ -184,10 +184,10 @@ def main():
     print(f'| AUPRC score: {prc_auc*100.0:>.3f}', end = " ")
     print(f'| FPR@TPR95: {fpr*100.0:>.3f}')
 
-    # Plot PR curve
+    # Plot PR and ROC curve https://github.com/tayden/ood-metrics/tree/main
     if args.plotdir:
         os.makedirs(args.plotdir, exist_ok=True)    # True to avoid OSError if target already exists
-        plot_pr(val_out, val_label, title="Precision-Recall Curve", save_path=args.plotdir, file_name=f"PR_curve_{args.method}_{args.model}")
+        plot_pr(val_out, val_label, title="Precision-Recall Curve", save_dir=args.plotdir, file_name=f"PR_curve_{args.method}_{args.loadModel}")
 
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
