@@ -13,7 +13,8 @@ import torchvision.transforms as T
 
 from PIL import Image
 from argparse import ArgumentParser
-from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr, plot_barcode
+from ood_metrics import fpr_at_95_tpr, calc_metrics
+from plots import plot_roc, plot_pr, plot_barcode   # starting from ood_metrics original version
 from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../train')))
@@ -184,7 +185,7 @@ def main():
     print(f'| AUPRC score: {prc_auc*100.0:>.3f}', end = " ")
     print(f'| FPR@TPR95: {fpr*100.0:>.3f}')
 
-    # Plot PR and ROC curve https://github.com/tayden/ood-metrics/tree/main
+    # Plot PR and ROC curve (see re-implementations in plots.py)
     if args.plotdir:
         os.makedirs(args.plotdir, exist_ok=True)    # True to avoid OSError if target already exists
         plot_pr(val_out, val_label, title="Precision-Recall Curve", save_dir=args.plotdir, file_name=f"PR_curve_{args.method}_{args.loadModel}")
