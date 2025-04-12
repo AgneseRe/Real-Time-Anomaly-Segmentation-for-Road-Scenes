@@ -171,8 +171,8 @@ def main():
     prc_auc = average_precision_score(val_label, val_out)
     fpr = fpr_at_95_tpr(val_out, val_label)
 
-    print(f'\t\tAUPRC score: {prc_auc*100.0:.3f}')
-    print(f'\t\tFPR@TPR95: {fpr*100.0:.3f}')
+    print(f'| AUPRC score: {prc_auc*100.0:>.3f}', end = " ")
+    print(f'| FPR@TPR95: {fpr*100.0:>.3f}')
 
     # TODO: Draw PRC and ROC curve
 
