@@ -188,7 +188,10 @@ def main():
     # Plot PR and ROC curve (see re-implementations in plots.py)
     if args.plotdir:
         os.makedirs(args.plotdir, exist_ok=True)    # True to avoid OSError if target already exists
-        plot_pr(val_out, val_label, title="Precision-Recall Curve", save_dir=args.plotdir, file_name=f"PR_curve_{args.method}_{args.loadModel}")
+        plot_pr(val_out, val_label, title="Precision-Recall Curve", save_dir=args.plotdir, 
+                file_name=f"PR_curve_{args.method}_{args.loadModel}")
+        plot_roc(val_out, val_label, title="ROC Curve", save_dir=args.plotdir, 
+                file_name=f"ROC_curve_{args.method}_{args.loadModel}")
 
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
