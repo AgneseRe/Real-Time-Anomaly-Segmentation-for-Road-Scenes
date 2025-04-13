@@ -3,27 +3,28 @@
 # Eduardo Romera
 #######################
 
-import numpy as np
-import torch
-import torch.nn.functional as F
 import os
-import importlib
+import sys
 import time
+import torch
+import numpy as np
+import torch.nn.functional as F
+import importlib
 
 from PIL import Image
 from argparse import ArgumentParser
 
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, CenterCrop, Normalize, Resize
 from torchvision.transforms import ToTensor, ToPILImage
+from torchvision.transforms import Compose, CenterCrop, Normalize, Resize
 
 from dataset import cityscapes
 #from erfnet import ERFNet
 from transform import Relabel, ToLabel, Colorize
 from iouEval import iouEval, getColorEntry
+
 #TODO: revisionare tutto il file
-import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ERFNet = importlib.import_module('train.erfnet').ErfNet
 ENet = importlib.import_module('train.enet').ENet
@@ -32,11 +33,14 @@ BiSeNetV1 = importlib.import_module('train.bisenet').BiSeNet
 NUM_CHANNELS = 3
 NUM_CLASSES = 20
 
+# TODO: perchè BILINEAR e NEAREST?
+
 image_transform = ToPILImage()
 input_transform_cityscapes = Compose([
     Resize(512, Image.BILINEAR),
     ToTensor(),
 ])
+
 target_transform_cityscapes = Compose([
     Resize(512, Image.NEAREST),
     ToLabel(),
@@ -50,6 +54,7 @@ def main(args):
 
     print ("Loading model: " + modelpath)
     print ("Loading weights: " + weightspath)
+
     device = torch.device('cuda' if torch.cuda.is_available() and not args.cpu else 'cpu')
     if args.model == "erfnet":
       model = ERFNet(NUM_CLASSES).to(device)
@@ -76,6 +81,7 @@ def main(args):
             else:
                 own_state[name].copy_(param)
         return model'''
+    
     def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
         own_state = model.state_dict()
         print(state_dict.keys())
