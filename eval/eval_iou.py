@@ -19,22 +19,20 @@ from torchvision.transforms import ToTensor, ToPILImage
 from torchvision.transforms import Compose, CenterCrop, Normalize, Resize
 
 from dataset import cityscapes
-#from erfnet import ERFNet
 from transform import Relabel, ToLabel, Colorize
 from iouEval import iouEval, getColorEntry
 
+# Import networks
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from train.erfnet import ERFNet
 from train.enet import ENet
 from train.bisenet import BiSeNet
 
 
-
 NUM_CHANNELS = 3
 NUM_CLASSES = 20
 
-
+# Preprocessing
 image_transform = ToPILImage()
 input_transform_cityscapes = Compose([
     Resize(512, Image.BILINEAR),
@@ -84,8 +82,10 @@ def main(args):
     
     def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
         own_state = model.state_dict()
-        print(state_dict.keys())
-        print(own_state.keys())
+        # ['module.encoder.initial_block.conv.weight', 'module.encoder.initial_block.conv.bias', 
+        # 'module.encoder.initial_block.bn.weight', 'module.encoder.initial_block.bn.bias', ... ]
+        # print(state_dict.keys())
+        # print(own_state.keys())
         # Check if the model is 'erfnet_isomaxplus'and load the state dict for IsoMaxPlusLossFirstPart
         if args.model == "erfnet_isomaxplus" and 'loss_first_part_state_dict' in state_dict:
             # Get the state dict for IsoMaxPlusLossFirstPart
@@ -111,19 +111,17 @@ def main(args):
             else:
                 own_state[name].copy_(param)
         return model
+    
     weightspath = args.loadDir + args.loadWeights # serve davvero?
     model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
     print ("Model and weights LOADED successfully")
-
 
     model.eval()
 
     if(not os.path.exists(args.datadir)):
         print ("Error: datadir could not be loaded")
 
-
     loader = DataLoader(cityscapes(args.datadir, input_transform_cityscapes, target_transform_cityscapes, subset=args.subset), num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
-
 
     iouEvalVal = iouEval(NUM_CLASSES)
 
@@ -142,8 +140,7 @@ def main(args):
 
         filenameSave = filename[0].split("leftImg8bit/")[1] 
 
-        print (step, filenameSave)
-
+        # print (step, filenameSave)
 
     iouVal, iou_classes = iouEvalVal.getIoU()
 
@@ -188,11 +185,11 @@ if __name__ == '__main__':
     parser.add_argument('--loadDir',default="../trained_models/")
     parser.add_argument('--loadWeights', default="erfnet_pretrained.pth")
     parser.add_argument('--loadModel', default="erfnet.py")
-    parser.add_argument('--subset', default="val")  #can be val or train (must have labels)
+    parser.add_argument('--subset', default="val")  # can be val or train (must have labels)
     parser.add_argument('--datadir', default="/home/shyam/ViT-Adapter/segmentation/data/cityscapes/")
-    parser.add_argument('--num-workers', type=int, default=4)
+    parser.add_argument('--num-workers', type=int, default=2)   # to avoid UserWarning of excessive worker creation
     parser.add_argument('--batch-size', type=int, default=1)
-    parser.add_argument('--model', default="erfnet") #can be erfnet, erfnet_isomaxplus, enet, bisenet
+    parser.add_argument('--model', default="erfnet") # can be erfnet, erfnet_isomaxplus, enet, bisenet
     parser.add_argument('--cpu', action='store_true')
 
     main(parser.parse_args())
