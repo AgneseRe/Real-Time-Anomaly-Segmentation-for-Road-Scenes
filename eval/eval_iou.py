@@ -29,12 +29,11 @@ from train.erfnet import ERFNet
 from train.enet import ENet
 from train.bisenet import BiSeNet
 
-#TODO: revisionare tutto il file
+
 
 NUM_CHANNELS = 3
 NUM_CLASSES = 20
 
-# TODO: perchè BILINEAR e NEAREST?
 
 image_transform = ToPILImage()
 input_transform_cityscapes = Compose([
@@ -59,14 +58,14 @@ def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() and not args.cpu else 'cpu')
     if args.model == "erfnet":
       model = ERFNet(NUM_CLASSES).to(device)
-    elif args.model == "erfnet_isomaxplus":
-      model = ERFNet(NUM_CLASSES, use_isomaxplus=True).to(device)
+    elif args.model == "erfnet_isomaxplus": #punto4
+      model = ERFNet(NUM_CLASSES, use_isomaxplus=True).to(device) #\punto4
     elif args.model =="enet":
         model = ENet(NUM_CLASSES).to(device)
     elif args.model == "bisenet":
         model = BiSeNet(NUM_CLASSES).to(device)
 
-    #model = torch.nn.DataParallel(model)
+    #model = torch.nn.DataParallel(model) //non carica modello su gpu
     if (not args.cpu):
         model = torch.nn.DataParallel(model).cuda()
 
@@ -112,7 +111,7 @@ def main(args):
             else:
                 own_state[name].copy_(param)
         return model
-    weightspath = args.loadDir + args.loadWeights
+    weightspath = args.loadDir + args.loadWeights # serve davvero?
     model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
     print ("Model and weights LOADED successfully")
 
