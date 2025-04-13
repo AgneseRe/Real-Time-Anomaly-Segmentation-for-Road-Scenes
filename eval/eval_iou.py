@@ -64,7 +64,7 @@ def main(args):
     elif args.model =="enet":
         model = ENet(NUM_CLASSES).to(device)
     elif args.model == "bisenet":
-        model = BiSeNetV1(NUM_CLASSES).to(device)
+        model = BiSeNet(NUM_CLASSES).to(device)
 
     #model = torch.nn.DataParallel(model)
     if (not args.cpu):
