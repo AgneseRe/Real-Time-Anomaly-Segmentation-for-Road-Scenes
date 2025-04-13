@@ -8,7 +8,7 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 
-from train.resnet import Resnet18
+from resnet import Resnet18
 from torch.nn import BatchNorm2d
 
 # Spatial Path (to preserve spatial information and generate high-resolution features)
