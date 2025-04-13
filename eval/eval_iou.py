@@ -9,7 +9,6 @@ import time
 import torch
 import numpy as np
 import torch.nn.functional as F
-import importlib
 
 from PIL import Image
 from argparse import ArgumentParser
@@ -24,11 +23,13 @@ from dataset import cityscapes
 from transform import Relabel, ToLabel, Colorize
 from iouEval import iouEval, getColorEntry
 
-#TODO: revisionare tutto il file
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-ERFNet = importlib.import_module('train.erfnet').ErfNet
-ENet = importlib.import_module('train.enet').ENet
-BiSeNetV1 = importlib.import_module('train.bisenet').BiSeNet
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from train.erfnet import ERFNet
+from train.enet import ENet
+from train.bisenet import BiSeNet
+
+#TODO: revisionare tutto il file
 
 NUM_CHANNELS = 3
 NUM_CLASSES = 20
