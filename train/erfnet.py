@@ -3,11 +3,14 @@
 # Eduardo Romera
 #######################
 
+import os
+import sys
 import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from train.utils.losses.isomax_plus_loss import IsoMaxPlusLossSecondPart, IsoMaxPlusLossFirstPart
 
 class DownsamplerBlock (nn.Module):
