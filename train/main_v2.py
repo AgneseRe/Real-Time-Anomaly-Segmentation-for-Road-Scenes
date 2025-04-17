@@ -144,7 +144,7 @@ def train(args, model, enc=False):
         
         if args.logit_norm: # Logit Normalization
             criterion = LogitNormLoss(loss_function = criterion)
-        print(f"ErfNet criterion: {type(criterion)}")
+        print(f"ERFNet criterion: {type(criterion)}")
     elif args.model == "enet":
         criterion = CrossEntropyLoss2d(weights)
     else:   # BiSeNet 
@@ -274,7 +274,7 @@ def train(args, model, enc=False):
                 loss_aux16 = criterion_aux16(outputs[1], targets[:, 0])
                 loss_aux32 = criterion_aux32(outputs[2], targets[:, 0])
                 loss = loss_principal + loss_aux16 + loss_aux32
-            else:   # for ErfNet (also IsoMaxPlus) and ENet
+            else:   # for ERFNet (also IsoMaxPlus) and ENet
                 loss = criterion(outputs, targets[:, 0])
 
             loss.backward()
@@ -346,7 +346,7 @@ def train(args, model, enc=False):
                 loss_aux16 = criterion_aux16(outputs[1], targets[:, 0])
                 loss_aux32 = criterion_aux32(outputs[2], targets[:, 0])
                 loss = loss_principal + loss_aux16 + loss_aux32
-            else:   # for ErfNet and ENet
+            else:   # for ERFNet and ENet
                 loss = criterion(outputs, targets[:, 0])
 
             epoch_loss_val.append(loss.item())
@@ -488,7 +488,7 @@ def main(args):
         model_file = importlib.import_module(args.model)
 
     if args.model == "erfnet":
-        model = model_file.ErfNet(NUM_CLASSES)
+        model = model_file.ERFNet(NUM_CLASSES)
     elif args.model == "erfnet_isomaxplus":
         model = model_file.ERFNet(NUM_CLASSES, use_isomaxplus=True)
     elif args.model == "bisenet":
