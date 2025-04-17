@@ -52,6 +52,7 @@ class ErfNetTransform(object):
 
         return input, target
 
+# https://github.com/CoinCheung/BiSeNet/blob/master/lib/data/transform_cv2.py
 class BiSeNetTransform(object):
     """
     Different functions implemented to perform random augments on both image 
