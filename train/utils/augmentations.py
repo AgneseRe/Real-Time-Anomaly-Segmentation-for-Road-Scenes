@@ -57,52 +57,161 @@ class ErfNetTransform(object):
 # BiSeNet Augmentations
 # Source: https://github.com/CoinCheung/BiSeNet/blob/master/lib/data/transform_cv2.py
 # ====================================================================================
-class BiSeNetTransform(object):
-    """
-    Different functions implemented to perform random augments on both image 
-    and target for BiSeNet model (e.g. mean subtraction, horizontal flip, scale, 
-    crop into fix size). As suggested in the BiSeNet official paper.
-    """
-    def __init__(self, cs_mean, crop_size = (512, 512)):
-        self.cs_mean = cs_mean
-        self.crop_size = crop_size
-        self.scales = [0.75, 1.0, 1.5, 1.75, 2.0]
+class RandomResizedCrop(object):
+    '''
+    size should be a tuple of (H, W)
+    '''
+    def __init__(self, scales=(0.5, 1.), size=(384, 384)):
+        self.scales = scales
+        self.size = size
 
-    def __call__(self, input, target):
-        input = Resize(self.crop_size[0], Image.BILINEAR, antialias=True)(input)
-        target = Resize(self.crop_size[0], Image.NEAREST, antialias=True)(target)
+    def __call__(self, im_lb):
+        if self.size is None:
+            return im_lb
 
-        # Mean substraction (input between 0 and 1)
-        input = np.asarray(input).astype(np.float32) / 255.0
-        input = input - self.cs_mean
+        im, lb = im_lb['im'], im_lb['lb']
+        assert im.shape[:2] == lb.shape[:2]
 
-        input = torch.from_numpy(input.transpose(2, 0, 1)).float()
+        crop_h, crop_w = self.size
+        scale = np.random.uniform(min(self.scales), max(self.scales))
+        im_h, im_w = [math.ceil(el * scale) for el in im.shape[:2]]
+        im = cv2.resize(im, (im_w, im_h))
+        lb = cv2.resize(lb, (im_w, im_h), interpolation=cv2.INTER_NEAREST)
 
-        # Random horizontal flip
-        if random.random() > 0.5:
-            input = TF.hflip(input)
-            target = TF.hflip(target)
+        if (im_h, im_w) == (crop_h, crop_w): return dict(im=im, lb=lb)
+        pad_h, pad_w = 0, 0
+        if im_h < crop_h:
+            pad_h = (crop_h - im_h) // 2 + 1
+        if im_w < crop_w:
+            pad_w = (crop_w - im_w) // 2 + 1
+        if pad_h > 0 or pad_w > 0:
+            im = np.pad(im, ((pad_h, pad_h), (pad_w, pad_w), (0, 0)))
+            lb = np.pad(lb, ((pad_h, pad_h), (pad_w, pad_w)), 'constant', constant_values=255)
 
-        # Apply random scale
-        scale = random.choice(self.scales)
-        size = int(scale * self.crop_size[0])
-        input = Resize(size, Image.BILINEAR, antialias=True)(input)
-        target = Resize(size, Image.NEAREST, antialias=True)(target)
-        
-        if scale == 0.75:
-            padding = 128, 128
-            input = Pad(padding, fill=0, padding_mode='constant')(input)
-            target = Pad(padding, fill=255, padding_mode='constant')(target)
-        
-        # Crop
-        i, j, h, w = RandomCrop.get_params(input, output_size=(self.crop_size[0], self.crop_size[1]))
-        input = TF.crop(input, i, j, h, w)
-        target = TF.crop(target, i, j, h, w)
+        im_h, im_w, _ = im.shape
+        sh, sw = np.random.random(2)
+        sh, sw = int(sh * (im_h - crop_h)), int(sw * (im_w - crop_w))
+        return dict(
+            im=im[sh:sh+crop_h, sw:sw+crop_w, :].copy(),
+            lb=lb[sh:sh+crop_h, sw:sw+crop_w].copy()
+        )
+    
+class RandomHorizontalFlip(object):
 
-        target = ToLabel()(target)
-        target = Relabel(255, 19)(target)
+    def __init__(self, p=0.5):
+        self.p = p
 
-        return input, target
+    def __call__(self, im_lb):
+        if np.random.random() < self.p:
+            return im_lb
+        im, lb = im_lb['im'], im_lb['lb']
+        assert im.shape[:2] == lb.shape[:2]
+        return dict(
+            im=im[:, ::-1, :],
+            lb=lb[:, ::-1],
+        )
+    
+class ColorJitter(object):
+
+    def __init__(self, brightness=None, contrast=None, saturation=None):
+        if not brightness is None and brightness >= 0:
+            self.brightness = [max(1-brightness, 0), 1+brightness]
+        if not contrast is None and contrast >= 0:
+            self.contrast = [max(1-contrast, 0), 1+contrast]
+        if not saturation is None and saturation >= 0:
+            self.saturation = [max(1-saturation, 0), 1+saturation]
+
+    def __call__(self, im_lb):
+        im, lb = im_lb['im'], im_lb['lb']
+        assert im.shape[:2] == lb.shape[:2]
+        if not self.brightness is None:
+            rate = np.random.uniform(*self.brightness)
+            im = self.adj_brightness(im, rate)
+        if not self.contrast is None:
+            rate = np.random.uniform(*self.contrast)
+            im = self.adj_contrast(im, rate)
+        if not self.saturation is None:
+            rate = np.random.uniform(*self.saturation)
+            im = self.adj_saturation(im, rate)
+        return dict(im=im, lb=lb,)
+
+    def adj_saturation(self, im, rate):
+        M = np.float32([
+            [1+2*rate, 1-rate, 1-rate],
+            [1-rate, 1+2*rate, 1-rate],
+            [1-rate, 1-rate, 1+2*rate]
+        ])
+        shape = im.shape
+        im = np.matmul(im.reshape(-1, 3), M).reshape(shape)/3
+        im = np.clip(im, 0, 255).astype(np.uint8)
+        return im
+
+    def adj_brightness(self, im, rate):
+        table = np.array([
+            i * rate for i in range(256)
+        ]).clip(0, 255).astype(np.uint8)
+        return table[im]
+
+    def adj_contrast(self, im, rate):
+        table = np.array([
+            74 + (i - 74) * rate for i in range(256)
+        ]).clip(0, 255).astype(np.uint8)
+        return table[im]
+    
+class ToTensor(object):
+    '''
+    mean and std should be of the channel order 'bgr'
+    '''
+    def __init__(self, mean=(0, 0, 0), std=(1., 1., 1.)):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, im_lb):
+        im, lb = im_lb['im'], im_lb['lb']
+        im = im.transpose(2, 0, 1).astype(np.float32)
+        im = torch.from_numpy(im).div_(255)
+        dtype, device = im.dtype, im.device
+        mean = torch.as_tensor(self.mean, dtype=dtype, device=device)[:, None, None]
+        std = torch.as_tensor(self.std, dtype=dtype, device=device)[:, None, None]
+        im = im.sub_(mean).div_(std).clone()
+        if not lb is None:
+            lb = torch.from_numpy(lb.astype(np.int64).copy()).clone()
+        return dict(im=im, lb=lb)
+
+
+class Compose(object):
+
+    def __init__(self, do_list):
+        self.do_list = do_list
+
+    def __call__(self, im_lb):
+        for comp in self.do_list:
+            im_lb = comp(im_lb)
+        return im_lb
+    
+
+class BiSeNetTransformTrain(object):
+
+    def __init__(self, scales, cropsize):
+        self.trans_func = Compose([
+            RandomResizedCrop(scales, cropsize),
+            RandomHorizontalFlip(),
+            ColorJitter(
+                brightness=0.4,
+                contrast=0.4,
+                saturation=0.4
+            ),
+        ])
+
+    def __call__(self, im_lb):
+        im_lb = self.trans_func(im_lb)
+        return im_lb
+    
+class BiSeNetTransformVal(object):
+
+    def __call__(self, im_lb):
+        im, lb = im_lb['im'], im_lb['lb']
+        return dict(im=im, lb=lb)
     
 # ====================================================================================
 # ENet Augmentations
