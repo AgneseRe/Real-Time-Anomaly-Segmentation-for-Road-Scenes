@@ -1,4 +1,5 @@
 import cv2
+import math
 import torch
 import random
 import numpy as np
@@ -11,7 +12,7 @@ from torchvision.transforms import ToTensor
 from torchvision.transforms import Pad, RandomCrop
 
 # ====================================================================================
-# ERFNet Augmentations
+#                               ERFNet Augmentations
 # ====================================================================================
 class ErfNetTransform(object):
     """
@@ -54,9 +55,37 @@ class ErfNetTransform(object):
         return input, target
 
 # ====================================================================================
-# BiSeNet Augmentations
+#                               BiSeNet Augmentations     
 # Source: https://github.com/CoinCheung/BiSeNet/blob/master/lib/data/transform_cv2.py
 # ====================================================================================
+class BiSeNetTransformTrain(object):
+
+    def __init__(self, scales=(0.75, 2.0), cropsize=(1024, 1024)):
+        self.trans_func = Compose([
+            RandomResizedCrop(scales, cropsize),
+            RandomHorizontalFlip(),
+            ColorJitter(
+                brightness=0.4,
+                contrast=0.4,
+                saturation=0.4
+            ),
+        ])
+
+    def __call__(self, input, target):
+        input, target = self.trans_func(input, target)
+        input = ToTensor()(input)
+        target = ToLabel()(target)
+        target = Relabel(255, 19)(target)
+        return input, target
+    
+class BiSeNetTransformVal(object):
+
+    def __call__(self, input, target):
+        input = ToTensor()(input)
+        target = ToLabel()(target)
+        target = Relabel(255, 19)(target)
+        return input, target
+
 class RandomResizedCrop(object):
     '''
     size should be a tuple of (H, W)
@@ -65,11 +94,14 @@ class RandomResizedCrop(object):
         self.scales = scales
         self.size = size
 
-    def __call__(self, im_lb):
+    def __call__(self, im, lb):
         if self.size is None:
-            return im_lb
+            return im, lb
 
-        im, lb = im_lb['im'], im_lb['lb']
+        if not isinstance(im, np.ndarray):
+            im = np.array(im)
+        if not isinstance(lb, np.ndarray):
+            lb = np.array(lb)
         assert im.shape[:2] == lb.shape[:2]
 
         crop_h, crop_w = self.size
@@ -78,7 +110,8 @@ class RandomResizedCrop(object):
         im = cv2.resize(im, (im_w, im_h))
         lb = cv2.resize(lb, (im_w, im_h), interpolation=cv2.INTER_NEAREST)
 
-        if (im_h, im_w) == (crop_h, crop_w): return dict(im=im, lb=lb)
+        if (im_h, im_w) == (crop_h, crop_w): 
+            return im, lb
         pad_h, pad_w = 0, 0
         if im_h < crop_h:
             pad_h = (crop_h - im_h) // 2 + 1
@@ -101,15 +134,11 @@ class RandomHorizontalFlip(object):
     def __init__(self, p=0.5):
         self.p = p
 
-    def __call__(self, im_lb):
+    def __call__(self, im, lb):
         if np.random.random() < self.p:
-            return im_lb
-        im, lb = im_lb['im'], im_lb['lb']
+            return im, lb
         assert im.shape[:2] == lb.shape[:2]
-        return dict(
-            im=im[:, ::-1, :],
-            lb=lb[:, ::-1],
-        )
+        return im[:, ::-1, :], lb[:, ::-1]
     
 class ColorJitter(object):
 
@@ -121,8 +150,7 @@ class ColorJitter(object):
         if not saturation is None and saturation >= 0:
             self.saturation = [max(1-saturation, 0), 1+saturation]
 
-    def __call__(self, im_lb):
-        im, lb = im_lb['im'], im_lb['lb']
+    def __call__(self, im, lb):
         assert im.shape[:2] == lb.shape[:2]
         if not self.brightness is None:
             rate = np.random.uniform(*self.brightness)
@@ -133,7 +161,7 @@ class ColorJitter(object):
         if not self.saturation is None:
             rate = np.random.uniform(*self.saturation)
             im = self.adj_saturation(im, rate)
-        return dict(im=im, lb=lb,)
+        return im, lb
 
     def adj_saturation(self, im, rate):
         M = np.float32([
@@ -166,8 +194,7 @@ class ToTensor(object):
         self.mean = mean
         self.std = std
 
-    def __call__(self, im_lb):
-        im, lb = im_lb['im'], im_lb['lb']
+    def __call__(self, im, lb):
         im = im.transpose(2, 0, 1).astype(np.float32)
         im = torch.from_numpy(im).div_(255)
         dtype, device = im.dtype, im.device
@@ -176,42 +203,17 @@ class ToTensor(object):
         im = im.sub_(mean).div_(std).clone()
         if not lb is None:
             lb = torch.from_numpy(lb.astype(np.int64).copy()).clone()
-        return dict(im=im, lb=lb)
-
+        return im, lb
 
 class Compose(object):
 
     def __init__(self, do_list):
         self.do_list = do_list
 
-    def __call__(self, im_lb):
+    def __call__(self, im, lb):
         for comp in self.do_list:
-            im_lb = comp(im_lb)
-        return im_lb
-    
-
-class BiSeNetTransformTrain(object):
-
-    def __init__(self, scales, cropsize):
-        self.trans_func = Compose([
-            RandomResizedCrop(scales, cropsize),
-            RandomHorizontalFlip(),
-            ColorJitter(
-                brightness=0.4,
-                contrast=0.4,
-                saturation=0.4
-            ),
-        ])
-
-    def __call__(self, im_lb):
-        im_lb = self.trans_func(im_lb)
-        return im_lb
-    
-class BiSeNetTransformVal(object):
-
-    def __call__(self, im_lb):
-        im, lb = im_lb['im'], im_lb['lb']
-        return dict(im=im, lb=lb)
+            im, lb = comp(im, lb)
+        return im, lb
     
 # ====================================================================================
 # ENet Augmentations
