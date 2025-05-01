@@ -10,9 +10,9 @@ import numpy as np
 from PIL import Image, ImageOps
 from argparse import ArgumentParser
 
-from torch.optim import SGD, Adam, lr_scheduler
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from torch.optim import SGD, Adam, lr_scheduler
 from torchvision.transforms import Compose, CenterCrop, Normalize, Resize, Pad
 from torchvision.transforms import ToTensor, ToPILImage
 
@@ -23,19 +23,19 @@ from visualize import Dashboard
 from iouEval import iouEval, getColorEntry
 from shutil import copyfile
 
-# import loss functions
+# Import loss functions
 from utils.losses.focal_loss import FocalLoss
 from utils.losses.ohem_ce_loss import OhemCELoss
 from utils.losses.ce_loss import CrossEntropyLoss2d
 from utils.losses.logit_norm_loss import LogitNormLoss
 from utils.losses.isomax_plus_loss import IsoMaxPlusLossSecondPart, IsoMaxPlusLossFirstPart
 
-# import functions for weights computation and data augmentation
-from utils.weights import calculate_enet_weights, calculate_erfnet_weights
+# Import functions for class weights computation and data augmentation
+from utils.weights import calculate_enet_weights, calculate_erfnet_weights, calculate_erfnet_weights_hard
 from utils.augmentations import ErfNetTransform, BiSeNetTransformTrain, BiSeNetTransformVal, ENetTransform
 
 NUM_CHANNELS = 3
-NUM_CLASSES = 20 # cityscapes dataset (19 + 1)
+NUM_CLASSES = 20    # Cityscapes dataset (19 + 1)
 
 color_transform = Colorize(NUM_CLASSES)
 image_transform = ToPILImage()
@@ -159,7 +159,7 @@ def train(args, model, enc=False):
 
     savedir = f'../save/{args.savedir}'
 
-    # Encoder/Decoder part
+    # ========== ENCODER/DECODER ==========
     if (enc):
         automated_log_path = savedir + "/automated_log_encoder.txt"
         modeltxtpath = savedir + "/model_encoder.txt"
@@ -190,14 +190,18 @@ def train(args, model, enc=False):
             for param in model.module.conv_out.parameters():
                 param.requires_grad = True
         
-    # Optimizer
-    # ========== ERFNET ==========
-    # Official paper section IV Experiments: https://ieeexplore.ieee.org/document/8063438
-    # GitHub: https://github.com/Eromera/erfnet/blob/master/train/opts.lua
-    # ========== ENET ==========
-    # Official paper section 5.2 Benchmarks: https://arxiv.org/abs/1606.02147
-    # ========== BISENET ==========
-    # Official paper section 4.1 Implementation Protocol: https://arxiv.org/abs/1808.00897
+    # ========== OPTIMIZER ==========
+    # References for optimizer configurations used in different segmentation models.
+
+    # ERFNet:
+    # - Paper Section IV Experiments: https://ieeexplore.ieee.org/document/8063438
+    # - GitHub: https://github.com/Eromera/erfnet/blob/master/train/opts.lua
+
+    # ENet:
+    # - Paper Section 5.2 Benchmarks: https://arxiv.org/abs/1606.02147
+
+    # BiSeNet:
+    # - Paper Section 4.1 Implementation Protocol: https://arxiv.org/abs/1808.00897
     if args.model == "erfnet" or args.model == "erfnet_isomaxplus":
         optimizer = Adam(model.parameters(), 5e-5 if args.FineTune else 5e-4, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-4)
     elif args.model == "enet":
@@ -224,14 +228,14 @@ def train(args, model, enc=False):
         best_acc = checkpoint['best_acc']
         print("=> Loaded checkpoint at epoch {})".format(checkpoint['epoch']))
 
-    # Learning Rate Scheduler
+    # ========== LEARNING RATE SCHEDULER ==========
     if args.model == "erfnet" or args.model == "erfnet_isomaxplus" or args.model == "bisenet":
         lambda1 = lambda epoch: pow((1 - ((epoch-1)/args.num_epochs)), 0.9) 
         scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda = lambda1)
     else:   # ENet
         scheduler = lr_scheduler.StepLR(optimizer, 7 if args.FineTune else 100, 0.1)
 
-    # Model visualization
+    # ========== MODEL VISUALIZATION ==========
     if args.visualize and args.steps_plot > 0:
         board = Dashboard(args.port)
 
