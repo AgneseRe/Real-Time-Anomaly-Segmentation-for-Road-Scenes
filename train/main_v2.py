@@ -4,6 +4,7 @@ import math
 import time
 import torch
 import random
+import importlib
 import numpy as np
 
 from PIL import Image, ImageOps
@@ -19,7 +20,6 @@ from dataset import VOC12, cityscapes
 from transform import Relabel, ToLabel, Colorize
 from visualize import Dashboard
 
-import importlib
 from iouEval import iouEval, getColorEntry
 from shutil import copyfile
 
@@ -563,7 +563,7 @@ def main(args):
                         pretrainedEnc = pretrainedEnc.cpu()     #because loaded encoder is probably saved in cuda
                 else:
                     pretrainedEnc = next(model.children()).encoder
-                model = model_file.Net(NUM_CLASSES, encoder=pretrainedEnc)  #Add decoder to encoder
+                model = model_file.ERFNet(NUM_CLASSES, encoder=pretrainedEnc)  #Add decoder to encoder
                 if args.cuda:
                     model = torch.nn.DataParallel(model).cuda()
                 # When loading encoder reinitialize weights for decoder because they are set to 0 when training dec
@@ -582,7 +582,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--port', type=int, default=8097)
     parser.add_argument('--datadir', default=os.getenv("HOME") + "/datasets/cityscapes/")
-    parser.add_argument('--height', type=int, default=512)
+    parser.add_argument('--height', type=int, default=1024)
     parser.add_argument('--num-epochs', type=int, default=150)
     parser.add_argument('--num-workers', type=int, default=2)   # 4
     parser.add_argument('--batch-size', type=int, default=6)
