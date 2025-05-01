@@ -110,24 +110,27 @@ def train(args, model, enc=False):
     loader = DataLoader(dataset_train, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     loader_val = DataLoader(dataset_val, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
-    # Calculate weights of the model (torch tensor)
+    # ========== CLASS WEIGHTS ==========
     if args.model == "erfnet":
-        weights = calculate_erfnet_weights(enc, NUM_CLASSES)
-    elif args.model == "enet":
-        if os.path.exists("./utils/enet_weights.npy"):
-            weights = torch.tensor(np.load("./utils/enet_weights.npy"))
+        mode = "encoder" if enc else "decoder"
+        if not os.path.exists(f"./utils/class_distribution/erfnet_class_weights_{mode}.npy"):
+            weights = calculate_erfnet_weights(loader, NUM_CLASSES, enc)
         else:
+            weights = torch.tensor(np.load(f"./utils/class_distribution/erfnet_class_weights_{mode}.npy"))
+    elif args.model == "enet":
+        if not os.path.exists("./utils/class_distribution/enet_class_weights.npy"):
             weights = calculate_enet_weights(loader, NUM_CLASSES)
-            np.save("./utils/enet_weights.npy", weights.numpy())    
-    else:   # BiSeNet
-        weights = None
+        else:
+            weights = torch.tensor(np.load("./utils/class_distribution/enet_class_weights.npy"))   
+    else: 
+        weights = None  # BiSeNet learns from unbalanced dataset 
 
     if weights is not None:
         if args.cuda:
             weights = weights.cuda()
             print(weights)
     
-    # Loss function
+    # ========== LOSS FUNCTION ==========
     if args.model == "erfnet_isomaxplus":
         if args.loss == "focal":
             criterion = FocalLoss() # IsomaxPlus loss + Focal loss
