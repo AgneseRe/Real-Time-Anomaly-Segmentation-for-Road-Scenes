@@ -93,18 +93,18 @@ def train(args, model, enc=False):
 
     assert os.path.exists(args.datadir), "Error: datadir (dataset directory) could not be loaded" 
 
-    # Augmentations Transformations (different models)
+    # ========== DATA AUGMENTATION ==========
     if args.model == "erfnet" or args.model == "erfnet_isomaxplus":
         co_transform = ErfNetTransform(enc, augment=True, height=args.height)
         co_transform_val = ErfNetTransform(enc, augment=False, height=args.height)
-    elif args.model == "bisenet":
-        co_transform = BiSeNetTransformTrain()
-        co_transform_val = BiSeNetTransformVal()
-    else:   # ENet
+    elif args.model == "enet":
         co_transform = ENetTransform(augment=True)
         co_transform_val = ENetTransform(augment=False)
+    else:   # BiSeNet
+        co_transform = BiSeNetTransformTrain()
+        co_transform_val = BiSeNetTransformVal()
 
-    # Dataset and Loader (train and validation both)
+    # ========== TRAIN AND VAL DATASET ==========
     dataset_train = cityscapes(args.datadir, co_transform, 'train')
     dataset_val = cityscapes(args.datadir, co_transform_val, 'val')
     loader = DataLoader(dataset_train, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
@@ -172,7 +172,7 @@ def train(args, model, enc=False):
     with open(modeltxtpath, "w") as myfile:
         myfile.write(str(model))
 
-    # Finetuning
+    # ========== FINE-TUNING ========== 
     if args.FineTune:
         # freezing all layers except the last one
         for param in model.parameters():
