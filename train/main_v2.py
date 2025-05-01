@@ -114,11 +114,13 @@ def train(args, model, enc=False):
     if args.model == "erfnet":
         mode = "encoder" if enc else "decoder"
         if not os.path.exists(f"./utils/class_distribution/erfnet_class_weights_{mode}.npy"):
+            print("Calculating class weights...")
             weights = calculate_erfnet_weights(loader, NUM_CLASSES, enc)
         else:
             weights = torch.tensor(np.load(f"./utils/class_distribution/erfnet_class_weights_{mode}.npy"))
     elif args.model == "enet":
         if not os.path.exists("./utils/class_distribution/enet_class_weights.npy"):
+            print("Calculating class weights...")
             weights = calculate_enet_weights(loader, NUM_CLASSES)
         else:
             weights = torch.tensor(np.load("./utils/class_distribution/enet_class_weights.npy"))   

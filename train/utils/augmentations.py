@@ -11,9 +11,7 @@ from torchvision.transforms import Resize
 from torchvision.transforms import ToTensor
 from torchvision.transforms import Pad, RandomCrop
 
-# ====================================================================================
-#                               ERFNet Augmentations
-# ====================================================================================
+# ========== ERFNET DATA AUGMENTATION ==========
 class ErfNetTransform(object):
     """
     Different functions implemented to perform random augments on both image 
@@ -54,10 +52,8 @@ class ErfNetTransform(object):
 
         return input, target
 
-# ====================================================================================
-#                               BiSeNet Augmentations     
+# ========== BISENET DATA AUGMENTATION ==========   
 # Source: https://github.com/CoinCheung/BiSeNet/blob/master/lib/data/transform_cv2.py
-# ====================================================================================
 class BiSeNetTransformTrain(object):
 
     def __init__(self, scales=(0.75, 2.0), cropsize=(1024, 1024)):
@@ -196,9 +192,7 @@ class Compose(object):
             im, lb = comp(im, lb)
         return im, lb
     
-# ====================================================================================
-# ENet Augmentations
-# ====================================================================================
+# ========== ENET DATA AUGMENTATION ==========
 class ENetTransform(object):
     """
     Different functions implemented to perform random augments on both image 
