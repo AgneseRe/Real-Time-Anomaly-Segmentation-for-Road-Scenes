@@ -28,12 +28,12 @@ def calculate_erfnet_weights(loader: DataLoader, num_classes: int, enc: bool) ->
         class_counts[class_counts == 0] = 1  # Avoid division by zero
 
     mode = "encoder" if enc else "decoder"
-    np.save(f"./class_distribution/erfnet_class_frequency_{mode}.npy", class_counts.numpy())
-    plot_class_histogram(class_counts, save_path=f"../../plots/class_distribution_{mode}.png")
+    np.save(f"./utils/class_distribution/erfnet_class_frequency_{mode}.npy", class_counts.numpy())
+    plot_class_histogram(class_counts, save_path=f"../plots/class_distribution_{mode}.png")
 
     class_weights = 1.0 / class_counts  # Inverse frequency weighting
     class_weights = class_weights / sum(class_weights) * num_classes
-    np.save(f"./class_distribution/erfnet_class_weights_{mode}.npy", class_weights.numpy())
+    np.save(f"./utils/class_distribution/erfnet_class_weights_{mode}.npy", class_weights.numpy())
 
     return class_weights
 
@@ -136,7 +136,7 @@ def calculate_enet_weights(loader: DataLoader, num_classes: int, c: float = 1.02
     # For classes that do not appear, so class_probabilities is equal to 0
     class_weights[class_probabilities == 0] = 0
 
-    np.save("./class_distribution/enet_class_weights.npy", class_weights.numpy())
+    np.save("./utils/class_distribution/enet_class_weights.npy", class_weights.numpy())
 
     return class_weights
 
