@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 
-# ========== ERFNET WEIGHTS FOR CLASS BALANCING ==========
+# ========== ERFNET WEIGHTS FOR CLASS BALANCING BY HISTOGRAM ==========
 def calculate_erfnet_weights(loader: DataLoader, num_classes: int, enc: bool) -> torch.Tensor:
     """
     Calculate class weights for ERFNet model.
@@ -37,67 +37,68 @@ def calculate_erfnet_weights(loader: DataLoader, num_classes: int, enc: bool) ->
 
     return class_weights
 
-# def calculate_erfnet_weights(enc: bool, num_classes: int) -> torch.Tensor:
-#     """
-#     Calculate class weights for ErfNet model.
+# ========== ERFNET WEIGHTS FOR CLASS BALANCING HARD-CODED ==========
+def calculate_erfnet_weights(enc: bool, num_classes: int) -> torch.Tensor:
+    """
+    Calculate class weights for ErfNet model.
 
-#     This function generates a tensor of predefined weights, depending on
-#     wheter the model is being used in encoder or decoder mode.
+    This function generates a tensor of predefined weights, depending on
+    wheter the model is being used in encoder or decoder mode.
     
-#     Parameters:
-#         - enc (bool): Boolean value for indicating if the model is in
-#             encoder (True) or decoder (False) mode.
-#         - num_classes (int): Number of classes in the dataset (19 + 1).
+    Parameters:
+        - enc (bool): Boolean value for indicating if the model is in
+            encoder (True) or decoder (False) mode.
+        - num_classes (int): Number of classes in the dataset (19 + 1).
 
-#     Returns:
-#         - weights (torch.Tensor): Tensor containing weights for each class.
-#     """
-#     weights = torch.ones(num_classes)
+    Returns:
+        - weights (torch.Tensor): Tensor containing weights for each class.
+    """
+    weights = torch.ones(num_classes)
 
-#     if (enc):
-#         weights[0] = 2.3653597831726	
-#         weights[1] = 4.4237880706787	
-#         weights[2] = 2.9691488742828	
-#         weights[3] = 5.3442072868347	
-#         weights[4] = 5.2983593940735	
-#         weights[5] = 5.2275490760803	
-#         weights[6] = 5.4394111633301	
-#         weights[7] = 5.3659925460815	
-#         weights[8] = 3.4170460700989	
-#         weights[9] = 5.2414722442627	
-#         weights[10] = 4.7376127243042	
-#         weights[11] = 5.2286224365234	
-#         weights[12] = 5.455126285553	
-#         weights[13] = 4.3019247055054	
-#         weights[14] = 5.4264230728149	
-#         weights[15] = 5.4331531524658	
-#         weights[16] = 5.433765411377	
-#         weights[17] = 5.4631009101868	
-#         weights[18] = 5.3947434425354
-#     else:
-#         weights[0] = 2.8149201869965	
-#         weights[1] = 6.9850029945374	
-#         weights[2] = 3.7890393733978	
-#         weights[3] = 9.9428062438965	
-#         weights[4] = 9.7702074050903	
-#         weights[5] = 9.5110931396484	
-#         weights[6] = 10.311357498169	
-#         weights[7] = 10.026463508606	
-#         weights[8] = 4.6323022842407	
-#         weights[9] = 9.5608062744141	
-#         weights[10] = 7.8698215484619	
-#         weights[11] = 9.5168733596802	
-#         weights[12] = 10.373730659485	
-#         weights[13] = 6.6616044044495	
-#         weights[14] = 10.260489463806	
-#         weights[15] = 10.287888526917	
-#         weights[16] = 10.289801597595	
-#         weights[17] = 10.405355453491	
-#         weights[18] = 10.138095855713	
+    if (enc):
+        weights[0] = 2.3653597831726	
+        weights[1] = 4.4237880706787	
+        weights[2] = 2.9691488742828	
+        weights[3] = 5.3442072868347	
+        weights[4] = 5.2983593940735	
+        weights[5] = 5.2275490760803	
+        weights[6] = 5.4394111633301	
+        weights[7] = 5.3659925460815	
+        weights[8] = 3.4170460700989	
+        weights[9] = 5.2414722442627	
+        weights[10] = 4.7376127243042	
+        weights[11] = 5.2286224365234	
+        weights[12] = 5.455126285553	
+        weights[13] = 4.3019247055054	
+        weights[14] = 5.4264230728149	
+        weights[15] = 5.4331531524658	
+        weights[16] = 5.433765411377	
+        weights[17] = 5.4631009101868	
+        weights[18] = 5.3947434425354
+    else:
+        weights[0] = 2.8149201869965    #road
+        weights[1] = 6.9850029945374	#sidewalk
+        weights[2] = 3.7890393733978	#building
+        weights[3] = 9.9428062438965	#wall
+        weights[4] = 9.7702074050903	#fence
+        weights[5] = 9.5110931396484	#pole
+        weights[6] = 10.311357498169	#traffic light
+        weights[7] = 10.026463508606	#traffic sign
+        weights[8] = 4.6323022842407	#vegetation
+        weights[9] = 9.5608062744141	#terrain
+        weights[10] = 7.8698215484619   #sky
+        weights[11] = 9.5168733596802	#person
+        weights[12] = 10.373730659485	#rider
+        weights[13] = 6.6616044044495	#car
+        weights[14] = 10.260489463806	#truck
+        weights[15] = 10.287888526917	#bus
+        weights[16] = 10.289801597595	#train
+        weights[17] = 10.405355453491	#motorcycle
+        weights[18] = 10.138095855713	#bicycle
 
-#     weights[19] = 1  # for void classifier
+    weights[19] = 1  # for void classifier
 
-#     return weights
+    return weights
 
 
 # ========== ENET WEIGHTS FOR CLASS BALANCING ==========
