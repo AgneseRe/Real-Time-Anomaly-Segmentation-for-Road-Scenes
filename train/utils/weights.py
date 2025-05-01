@@ -38,7 +38,7 @@ def calculate_erfnet_weights(loader: DataLoader, num_classes: int, enc: bool) ->
     return class_weights
 
 # ========== ERFNET WEIGHTS FOR CLASS BALANCING HARD-CODED ==========
-def calculate_erfnet_weights(enc: bool, num_classes: int) -> torch.Tensor:
+def calculate_erfnet_weights_hard(enc: bool, num_classes: int) -> torch.Tensor:
     """
     Calculate class weights for ErfNet model.
 
