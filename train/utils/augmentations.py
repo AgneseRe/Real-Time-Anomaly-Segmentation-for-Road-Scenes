@@ -66,9 +66,9 @@ class BiSeNetTransform(object):
     def __call__(self, input, target):
 
         if self.augment:
-            input = RandomResizedCrop(self.scales, self.cropsize)(input, target)
-            input = RandomHorizontalFlip()(input, target)
-            input = ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4)(input, target)
+            input, target = RandomResizedCrop(self.scales, self.cropsize)(input, target)
+            input, target = RandomHorizontalFlip()(input, target)
+            input, target = ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4)(input, target)
         
         input = ToTensor()(input)
         target = ToLabel()(target)
