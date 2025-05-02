@@ -9,7 +9,7 @@ from PIL import Image, ImageOps
 from transform import Relabel, ToLabel
 from torchvision.transforms import Resize
 from torchvision.transforms import ToTensor
-from torchvision.transforms import Pad, RandomCrop
+from torchvision.transforms import ColorJitter, RandomCrop
 
 # ========== ERFNET DATA AUGMENTATION ==========
 class ErfNetTransform(object):
@@ -28,9 +28,8 @@ class ErfNetTransform(object):
         target = Resize(self.height, Image.NEAREST)(target)
 
         if(self.augment):
-            # Random hflip
-            hflip = random.random()
-            if (hflip < 0.5):
+            # Horizontal flip
+            if (random.random() < 0.5):
                 input = input.transpose(Image.FLIP_LEFT_RIGHT)
                 target = target.transpose(Image.FLIP_LEFT_RIGHT)
             
@@ -51,128 +50,56 @@ class ErfNetTransform(object):
 
         return input, target
 
-# ========== BISENET DATA AUGMENTATION ==========   
+# ========== BISENET DATA AUGMENTATION (MEMORY-SAFE) ==========   
 class BiSeNetTransform(object):
     """
     Data augmentation for training BiSeNet model, including random resized crop, 
     horizontal flip and color jitter. Inspired by the augmentation strategy used in: 
     https://github.com/CoinCheung/BiSeNet/blob/master/lib/data/transform_cv2.py.
+
+    NOTE: Augmentations have been rewritten using PIL and torchvision to be memory-safe 
+    (no OpenCV or NumPy as in the official version), reducing the risk of CUDA OOM errors.
     """
-    def __init__(self, augment=True, scales=(0.75, 2.0), cropsize=(512, 512)):
+    def __init__(self, augment=True, height=512, scales=(0.75, 1.25)):  # 2.0
         self.augment = augment
+        self.height = height
         self.scales = scales
-        self.cropsize = cropsize
+        self.color_jitter = ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4)
 
     def __call__(self, input, target):
+        # Resize input and target proportionally to a scaled height
+        scale = random.uniform(*self.scales)
+        scaled_height = int(self.height * scale)
+        input = Resize(scaled_height, Image.BILINEAR)(input)
+        target = Resize(scaled_height, Image.NEAREST)(target)
 
         if self.augment:
-            input, target = RandomResizedCrop(self.scales, self.cropsize)(input, target)
-            input, target = RandomHorizontalFlip()(input, target)
-            input, target = ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4)(input, target)
-        
+            # Pad if needed for following crop - scale < 1.0
+            pad_h = max(0, self.height - input.height)
+            pad_w = max(0, self.height - input.width)
+
+            if pad_h > 0 or pad_w > 0:
+                input = TF.pad(input, padding=(0, 0, pad_w, pad_h), fill=0)
+                target = TF.pad(target, padding=(0, 0, pad_w, pad_h), fill=255)
+
+            # Random crop synchronized for input and target
+            i, j, h, w = RandomCrop.get_params(input, output_size=(self.height, self.height))
+            input = TF.crop(input, i, j, h, w)
+            target = TF.crop(target, i, j, h, w)
+
+            # Horizontal flip
+            if random.random() < 0.5:
+                input = input.transpose(Image.FLIP_LEFT_RIGHT)
+                target = target.transpose(Image.FLIP_LEFT_RIGHT)
+
+            # Color jitter (only on input)
+            input = self.color_jitter(input)
+
         input = ToTensor()(input)
         target = ToLabel()(target)
         target = Relabel(255, 19)(target)
 
         return input, target
-
-class RandomResizedCrop(object):
-    
-    def __init__(self, scales=(0.5, 1.), size=(384, 384)):
-        self.scales = scales
-        self.size = size
-
-    def __call__(self, im, lb):
-        if self.size is None:
-            return im, lb
-
-        if not isinstance(im, np.ndarray):
-            im = np.array(im)
-        if not isinstance(lb, np.ndarray):
-            lb = np.array(lb)
-        assert im.shape[:2] == lb.shape[:2]
-
-        crop_h, crop_w = self.size
-        scale = np.random.uniform(min(self.scales), max(self.scales))
-        im_h, im_w = [math.ceil(el * scale) for el in im.shape[:2]] # rescaled height and width
-        im = cv2.resize(im, (im_w, im_h))
-        lb = cv2.resize(lb, (im_w, im_h), interpolation=cv2.INTER_NEAREST)
-
-        if (im_h, im_w) == (crop_h, crop_w): 
-            return im, lb
-        pad_h, pad_w = 0, 0
-        if im_h < crop_h:
-            pad_h = (crop_h - im_h) // 2 + 1
-        if im_w < crop_w:
-            pad_w = (crop_w - im_w) // 2 + 1
-        if pad_h > 0 or pad_w > 0:
-            im = np.pad(im, ((pad_h, pad_h), (pad_w, pad_w), (0, 0)))
-            lb = np.pad(lb, ((pad_h, pad_h), (pad_w, pad_w)), 'constant', constant_values=255)
-
-        im_h, im_w, _ = im.shape
-        sh, sw = np.random.random(2)
-        sh, sw = int(sh * (im_h - crop_h)), int(sw * (im_w - crop_w))
-        return (
-            im[sh:sh+crop_h, sw:sw+crop_w, :].copy(),
-            lb[sh:sh+crop_h, sw:sw+crop_w].copy()
-        )
-    
-class RandomHorizontalFlip(object):
-
-    def __init__(self, p=0.5):
-        self.p = p
-
-    def __call__(self, im, lb):
-        if np.random.random() < self.p:
-            return im, lb
-        assert im.shape[:2] == lb.shape[:2]
-        return im[:, ::-1, :], lb[:, ::-1]
-    
-class ColorJitter(object):
-
-    def __init__(self, brightness=None, contrast=None, saturation=None):
-        if not brightness is None and brightness >= 0:
-            self.brightness = [max(1-brightness, 0), 1+brightness]
-        if not contrast is None and contrast >= 0:
-            self.contrast = [max(1-contrast, 0), 1+contrast]
-        if not saturation is None and saturation >= 0:
-            self.saturation = [max(1-saturation, 0), 1+saturation]
-
-    def __call__(self, im, lb):
-        assert im.shape[:2] == lb.shape[:2]
-        if not self.brightness is None:
-            rate = np.random.uniform(*self.brightness)
-            im = self.adj_brightness(im, rate)
-        if not self.contrast is None:
-            rate = np.random.uniform(*self.contrast)
-            im = self.adj_contrast(im, rate)
-        if not self.saturation is None:
-            rate = np.random.uniform(*self.saturation)
-            im = self.adj_saturation(im, rate)
-        return im, lb
-
-    def adj_saturation(self, im, rate):
-        M = np.float32([
-            [1+2*rate, 1-rate, 1-rate],
-            [1-rate, 1+2*rate, 1-rate],
-            [1-rate, 1-rate, 1+2*rate]
-        ])
-        shape = im.shape
-        im = np.matmul(im.reshape(-1, 3), M).reshape(shape)/3
-        im = np.clip(im, 0, 255).astype(np.uint8)
-        return im
-
-    def adj_brightness(self, im, rate):
-        table = np.array([
-            i * rate for i in range(256)
-        ]).clip(0, 255).astype(np.uint8)
-        return table[im]
-
-    def adj_contrast(self, im, rate):
-        table = np.array([
-            74 + (i - 74) * rate for i in range(256)
-        ]).clip(0, 255).astype(np.uint8)
-        return table[im]
     
 # ========== ENET DATA AUGMENTATION ==========
 class ENetTransform(object):
@@ -189,9 +116,8 @@ class ENetTransform(object):
         target = Resize(self.height, Image.NEAREST)(target)
 
         if self.augment:
-            # Random hflip
-            hflip = random.random()
-            if hflip < 0.5:
+            # Horizontal flip
+            if random.random() < 0.5:
                 input = input.transpose(Image.FLIP_LEFT_RIGHT)
                 target = target.transpose(Image.FLIP_LEFT_RIGHT)
 
@@ -216,4 +142,5 @@ class ENetTransform(object):
         input = ToTensor()(input)
         target = ToLabel()(target)
         target = Relabel(255, 19)(target)
+
         return input, target
