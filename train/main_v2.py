@@ -591,7 +591,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--port', type=int, default=8097)
     parser.add_argument('--datadir', default=os.getenv("HOME") + "/datasets/cityscapes/")
-    parser.add_argument('--height', type=int, default=1024)
+    parser.add_argument('--height', type=int, default=512)
     parser.add_argument('--num-epochs', type=int, default=150)
     parser.add_argument('--num-workers', type=int, default=2)   # 4
     parser.add_argument('--batch-size', type=int, default=6)
