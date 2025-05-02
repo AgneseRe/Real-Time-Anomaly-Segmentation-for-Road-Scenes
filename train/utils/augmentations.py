@@ -120,9 +120,9 @@ class RandomResizedCrop(object):
         im_h, im_w, _ = im.shape
         sh, sw = np.random.random(2)
         sh, sw = int(sh * (im_h - crop_h)), int(sw * (im_w - crop_w))
-        return dict(
-            im=im[sh:sh+crop_h, sw:sw+crop_w, :].copy(),
-            lb=lb[sh:sh+crop_h, sw:sw+crop_w].copy()
+        return (
+            im[sh:sh+crop_h, sw:sw+crop_w, :].copy(),
+            lb[sh:sh+crop_h, sw:sw+crop_w].copy()
         )
     
 class RandomHorizontalFlip(object):
