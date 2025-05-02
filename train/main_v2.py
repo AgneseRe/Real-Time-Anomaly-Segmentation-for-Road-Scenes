@@ -32,7 +32,7 @@ from utils.losses.isomax_plus_loss import IsoMaxPlusLossSecondPart, IsoMaxPlusLo
 
 # Import functions for class weights computation and data augmentation
 from utils.weights import calculate_enet_weights, calculate_erfnet_weights, calculate_erfnet_weights_hard
-from utils.augmentations import ErfNetTransform, BiSeNetTransformTrain, BiSeNetTransformVal, ENetTransform
+from utils.augmentations import ErfNetTransform, BiSeNetTransform, ENetTransform
 
 NUM_CHANNELS = 3
 NUM_CLASSES = 20    # Cityscapes dataset (19 + 1)
@@ -98,11 +98,11 @@ def train(args, model, enc=False):
         co_transform = ErfNetTransform(enc, augment=True, height=args.height)
         co_transform_val = ErfNetTransform(enc, augment=False, height=args.height)
     elif args.model == "enet":
-        co_transform = ENetTransform(augment=True)
-        co_transform_val = ENetTransform(augment=False)
+        co_transform = ENetTransform(augment=True, height=args.height)
+        co_transform_val = ENetTransform(augment=False, height=args.height)
     else:   # BiSeNet
-        co_transform = BiSeNetTransformTrain()
-        co_transform_val = BiSeNetTransformVal()
+        co_transform = BiSeNetTransform(augment=True)
+        co_transform_val = BiSeNetTransform(augment=False)
 
     # ========== TRAIN AND VAL DATASET ==========
     dataset_train = cityscapes(args.datadir, co_transform, 'train')

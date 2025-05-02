@@ -14,14 +14,13 @@ from torchvision.transforms import Pad, RandomCrop
 # ========== ERFNET DATA AUGMENTATION ==========
 class ErfNetTransform(object):
     """
-    Different functions implemented to perform random augments on both image 
-    and target for ErfNet model (e.g. resize, horizontal flip, traslations, ...)
+    Data augmentation for training ERFNet model, including resize on both input and 
+    target image, horizontal flip and translations.
     """
     def __init__(self, enc, augment=True, height=512):
         self.enc=enc
         self.augment = augment
         self.height = height
-        pass
 
     def __call__(self, input, target):
         # do something to both images
@@ -35,7 +34,7 @@ class ErfNetTransform(object):
                 input = input.transpose(Image.FLIP_LEFT_RIGHT)
                 target = target.transpose(Image.FLIP_LEFT_RIGHT)
             
-            #Random translation 0-2 pixels (fill rest with padding
+            # Random translation 0-2 pixels (fill rest with padding)
             transX = random.randint(-2, 2) 
             transY = random.randint(-2, 2)
 
@@ -53,39 +52,32 @@ class ErfNetTransform(object):
         return input, target
 
 # ========== BISENET DATA AUGMENTATION ==========   
-# Source: https://github.com/CoinCheung/BiSeNet/blob/master/lib/data/transform_cv2.py
-class BiSeNetTransformTrain(object):
-
-    def __init__(self, scales=(0.75, 2.0), cropsize=(1024, 1024)):
-        self.trans_func = Compose([
-            RandomResizedCrop(scales, cropsize),
-            RandomHorizontalFlip(),
-            ColorJitter(
-                brightness=0.4,
-                contrast=0.4,
-                saturation=0.4
-            ),
-        ])
+class BiSeNetTransform(object):
+    """
+    Data augmentation for training BiSeNet model, including random resized crop, 
+    horizontal flip and color jitter. Inspired by the augmentation strategy used in: 
+    https://github.com/CoinCheung/BiSeNet/blob/master/lib/data/transform_cv2.py.
+    """
+    def __init__(self, augment=True, scales=(0.75, 2.0), cropsize=(512, 512)):
+        self.augment = augment
+        self.scales = scales
+        self.cropsize = cropsize
 
     def __call__(self, input, target):
-        input, target = self.trans_func(input, target)
+
+        if self.augment:
+            input = RandomResizedCrop(self.scales, self.cropsize)(input, target)
+            input = RandomHorizontalFlip()(input, target)
+            input = ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4)(input, target)
+        
         input = ToTensor()(input)
         target = ToLabel()(target)
         target = Relabel(255, 19)(target)
-        return input, target
-    
-class BiSeNetTransformVal(object):
 
-    def __call__(self, input, target):
-        input = ToTensor()(input)
-        target = ToLabel()(target)
-        target = Relabel(255, 19)(target)
         return input, target
 
 class RandomResizedCrop(object):
-    '''
-    size should be a tuple of (H, W)
-    '''
+    
     def __init__(self, scales=(0.5, 1.), size=(384, 384)):
         self.scales = scales
         self.size = size
@@ -102,7 +94,7 @@ class RandomResizedCrop(object):
 
         crop_h, crop_w = self.size
         scale = np.random.uniform(min(self.scales), max(self.scales))
-        im_h, im_w = [math.ceil(el * scale) for el in im.shape[:2]]
+        im_h, im_w = [math.ceil(el * scale) for el in im.shape[:2]] # rescaled height and width
         im = cv2.resize(im, (im_w, im_h))
         lb = cv2.resize(lb, (im_w, im_h), interpolation=cv2.INTER_NEAREST)
 
@@ -181,22 +173,12 @@ class ColorJitter(object):
             74 + (i - 74) * rate for i in range(256)
         ]).clip(0, 255).astype(np.uint8)
         return table[im]
-
-class Compose(object):
-
-    def __init__(self, do_list):
-        self.do_list = do_list
-
-    def __call__(self, im, lb):
-        for comp in self.do_list:
-            im, lb = comp(im, lb)
-        return im, lb
     
 # ========== ENET DATA AUGMENTATION ==========
 class ENetTransform(object):
     """
-    Different functions implemented to perform random augments on both image 
-    and target for ENet model (e.g. resize, horizontal flip, rotations, ...)
+    Data augmentation for training ENet model, including resize on both input and
+    target image, horizontal flip, translations, brightness adjustment and random noise.
     """
     def __init__(self, augment=True, height=512):
         self.augment = augment
