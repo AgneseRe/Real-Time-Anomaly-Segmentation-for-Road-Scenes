@@ -213,11 +213,24 @@ class ENetTransform(object):
                 input = input.transpose(Image.FLIP_LEFT_RIGHT)
                 target = target.transpose(Image.FLIP_LEFT_RIGHT)
 
-            # Random rotation between -10 and 10 degrees
-            angle = random.uniform(-10, 10)
-            input = input.rotate(angle, resample=Image.BILINEAR)
-            target = target.rotate(angle, resample=Image.NEAREST)
+            # Random translation   
+            transX = random.randint(-1, 1)
+            transY = random.randint(-1, 1)
+            
+            input = ImageOps.expand(input, border=(transX, transY, 0, 0), fill=0)
+            target = ImageOps.expand(target, border=(transX, transY, 0, 0), fill=255) #pad label filling with 255
+            input = input.crop((0, 0, input.size[0]-transX, input.size[1]-transY))
+            target = target.crop((0, 0, target.size[0]-transX, target.size[1]-transY))
 
+            # Random brightness adjustment
+            brightness_factor = random.uniform(0.6, 1.2)  # brightness between 60% and 120%
+            input = TF.adjust_brightness(input, brightness_factor)
+
+            # Random noise
+            noise = np.random.normal(0, 2, np.array(input).shape).astype(np.uint8)  # gaussian noise
+            input = np.clip(np.array(input) + noise, 0, 255).astype(np.uint8)
+            input = Image.fromarray(input)
+            
         input = ToTensor()(input)
         target = ToLabel()(target)
         target = Relabel(255, 19)(target)
