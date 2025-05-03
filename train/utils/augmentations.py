@@ -95,6 +95,10 @@ class BiSeNetTransform(object):
             # Color jitter (only on input)
             input = self.color_jitter(input)
 
+        # To ensure tensor of equal size PyTorch stack
+        input = Resize(self.height, Image.BILINEAR)(input)
+        target = Resize(self.height, Image.NEAREST)(target)
+
         input = ToTensor()(input)
         target = ToLabel()(target)
         target = Relabel(255, 19)(target)
