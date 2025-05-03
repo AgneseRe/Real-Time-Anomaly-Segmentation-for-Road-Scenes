@@ -1,5 +1,7 @@
-# BiSeNet: Bilateral Segmentation Network
-# Link: https://arxiv.org/abs/1808.00897
+# ===========================================================================
+# BiSeNet: Bilateral Segmentation Network for Real-time Semantic Segmentation
+# URL: https://arxiv.org/abs/1808.00897 by Changqian Yu, Jingbo Wang, et al.
+# ===========================================================================
 
 import torch
 import torchvision
