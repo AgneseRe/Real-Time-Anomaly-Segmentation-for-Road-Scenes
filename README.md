@@ -1,4 +1,11 @@
-# Real-Time-Anomaly-Segmentation [[Course Project](https://docs.google.com/document/d/1ElljsAprT2qX8RpePSQ3E00y_3oXrtN_CKYC6wqxyFQ/edit?usp=sharing)]
+# Real-Time-Anomaly-Segmentation-for-Road-Scenes
+![Python](https://img.shields.io/badge/language-Python-blue.svg)
+![PyTorch](https://img.shields.io/badge/framework-PyTorch-red)
+![Model](https://img.shields.io/badge/model-ERFNet--ENet--BiSeNet-green)
+
+[![ERFNet](https://img.shields.io/badge/IEEE-8063438-b31b1b.svg)](https://ieeexplore.ieee.org/document/8063438)
+[![ENet](https://img.shields.io/badge/arXiv-1606.02147-b31b1b.svg)](https://arxiv.org/abs/1606.02147)
+[![BiSeNet](https://img.shields.io/badge/arXiv-1808.00897-b31b1b.svg)](https://arxiv.org/abs/1808.00897)
 
 This repository provides a starter-code setup for the Real-Time Anomaly Segmentation project of the Machine Learning Course. It consists of the code base for training ERFNet on the Cityscapes dataset and perform anomaly segmentation.
 
