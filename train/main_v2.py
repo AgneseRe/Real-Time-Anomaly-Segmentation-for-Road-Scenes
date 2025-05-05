@@ -34,6 +34,13 @@ from utils.losses.isomax_plus_loss import IsoMaxPlusLossSecondPart, IsoMaxPlusLo
 from utils.weights import calculate_enet_weights, calculate_erfnet_weights, calculate_erfnet_weights_hard
 from utils.augmentations import ErfNetTransform, BiSeNetTransform, ENetTransform
 
+# Set seed for reproducibility across Python, NumPy, and PyTorch
+seed = 42
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+
 NUM_CHANNELS = 3
 NUM_CLASSES = 20    # Cityscapes dataset (19 + 1)
 
