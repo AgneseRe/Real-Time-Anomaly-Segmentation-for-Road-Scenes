@@ -249,8 +249,7 @@ def train(args, model, enc=False):
     for epoch in range(start_epoch, args.num_epochs+1):
         print("----- TRAINING - EPOCH", epoch, "-----")
 
-        # scheduler.step(epoch)     UserWarning: The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible
-        scheduler.step()
+        scheduler.step(epoch)    # lr with resume
 
         epoch_loss = []
         time_train = []
