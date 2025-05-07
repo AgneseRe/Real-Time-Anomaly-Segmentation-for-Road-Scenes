@@ -226,7 +226,14 @@ def train(args, model, enc=False):
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         best_acc = checkpoint['best_acc']
+        
         print("=> Loaded checkpoint at epoch {})".format(checkpoint['epoch']))
+        
+        if 'scheduler' in checkpoint:
+            scheduler.load_state_dict(checkpoint['scheduler'])
+            print("=> Loaded scheduler state")
+            
+        
 
     # ========== LEARNING RATE SCHEDULER ==========
     if args.model == "erfnet" or args.model == "erfnet_isomaxplus" or args.model == "bisenet":
@@ -234,6 +241,10 @@ def train(args, model, enc=False):
         scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda = lambda1)
     else:   # ENet
         scheduler = lr_scheduler.StepLR(optimizer, 7 if args.FineTune else 100, 0.1)
+        
+    # Carica lo stato del scheduler dal checkpoint
+    if args.resume and 'scheduler' in checkpoint:
+        scheduler.load_state_dict(checkpoint['scheduler'])
 
     # ========== MODEL VISUALIZATION ==========
     if args.visualize and args.steps_plot > 0:
@@ -428,6 +439,7 @@ def train(args, model, enc=False):
                 'state_dict': model.state_dict(),
                 'best_acc': best_acc,
                 'optimizer' : optimizer.state_dict(),
+                'scheduler' : scheduler.state_dict(),
             }, is_best, filenameCheckpoint, filenameBest)
 
         # SAVE MODEL AFTER EPOCH
