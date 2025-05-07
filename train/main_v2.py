@@ -229,11 +229,10 @@ def train(args, model, enc=False):
         
         print("=> Loaded checkpoint at epoch {})".format(checkpoint['epoch']))
         
-        if 'scheduler' in checkpoint:
-            scheduler.load_state_dict(checkpoint['scheduler'])
-            print("=> Loaded scheduler state")
+        # if 'scheduler' in checkpoint:
+        #     scheduler.load_state_dict(checkpoint['scheduler'])
+        #     print("=> Loaded scheduler state")
             
-        
 
     # ========== LEARNING RATE SCHEDULER ==========
     if args.model == "erfnet" or args.model == "erfnet_isomaxplus" or args.model == "bisenet":
@@ -241,10 +240,14 @@ def train(args, model, enc=False):
         scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda = lambda1)
     else:   # ENet
         scheduler = lr_scheduler.StepLR(optimizer, 7 if args.FineTune else 100, 0.1)
-        
+
+    if args.resume:
+        for _ in range(start_epoch):
+            scheduler.step()
+            
     # Carica lo stato del scheduler dal checkpoint
-    if args.resume and 'scheduler' in checkpoint:
-        scheduler.load_state_dict(checkpoint['scheduler'])
+    # if args.resume and 'scheduler' in checkpoint:
+    #     scheduler.load_state_dict(checkpoint['scheduler'])
 
     # ========== MODEL VISUALIZATION ==========
     if args.visualize and args.steps_plot > 0:
@@ -253,7 +256,7 @@ def train(args, model, enc=False):
     for epoch in range(start_epoch, args.num_epochs+1):
         print("----- TRAINING - EPOCH", epoch, "-----")
 
-        scheduler.step(epoch)    # lr with resume
+        scheduler.step()    
 
         epoch_loss = []
         time_train = []
@@ -439,7 +442,7 @@ def train(args, model, enc=False):
                 'state_dict': model.state_dict(),
                 'best_acc': best_acc,
                 'optimizer' : optimizer.state_dict(),
-                'scheduler' : scheduler.state_dict(),
+                # 'scheduler' : scheduler.state_dict(),
             }, is_best, filenameCheckpoint, filenameBest)
 
         # SAVE MODEL AFTER EPOCH
