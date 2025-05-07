@@ -1,4 +1,5 @@
 import numpy as np
+import hashlib
 import os
 
 from PIL import Image
@@ -26,6 +27,20 @@ def image_path_city(root, name):
 
 def image_basename(filename):
     return os.path.basename(os.path.splitext(filename)[0])
+
+def get_seed_from_path(path):
+    """
+    Generate a deterministic integer seed from a file path string.
+    This ensures that the same path always produces the same seed,
+    which is useful for reproducibility when resuming training. 
+
+    Parameters:
+        - path (str): The file path of the image.
+
+    Returns:
+        - int: A reproducible seed in the range [0, 100_000_000).
+    """
+    return int(hashlib.sha256(path.encode('utf-8')).hexdigest(), 16) % (10**8)
 
 class VOC12(Dataset):
 
@@ -93,7 +108,8 @@ class cityscapes(Dataset):
             label = load_image(f).convert('P')
 
         if self.co_transform is not None:
-            image, label = self.co_transform(image, label)
+            seed = get_seed_from_path(filename)
+            image, label = self.co_transform(image, label, seed)
         else:   # ADDED THIS FOR INITIAL MEAN COMPUTATION
             image = ToTensor()(image)
             label = ToLabel()(label)

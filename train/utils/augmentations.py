@@ -66,7 +66,12 @@ class BiSeNetTransform(object):
         self.scales = scales
         self.color_jitter = ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4)
 
-    def __call__(self, input, target):
+    def __call__(self, input, target, seed=None):
+        # Set seed for reproducibility
+        if seed is not None:
+          random.seed(seed)
+          np.random.seed(seed)
+
         # Resize input and target proportionally to a scaled height
         scale = random.uniform(*self.scales)
         scaled_height = int(self.height * scale)
