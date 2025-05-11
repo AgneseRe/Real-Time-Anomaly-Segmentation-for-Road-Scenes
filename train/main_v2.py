@@ -287,7 +287,7 @@ def train(args, model, enc=False):
                 loss_principal = criterion_principal(outputs[0], targets[:, 0])
                 loss_aux16 = criterion_aux16(outputs[1], targets[:, 0])
                 loss_aux32 = criterion_aux32(outputs[2], targets[:, 0])
-                loss = loss_principal + loss_aux16 + loss_aux32
+                loss = loss_principal + 0.4 * loss_aux16 + 0.4 * loss_aux32
             else:   # for ERFNet (also IsoMaxPlus) and ENet
                 loss = criterion(outputs, targets[:, 0])
 
@@ -359,7 +359,7 @@ def train(args, model, enc=False):
                 loss_principal = criterion_principal(outputs[0], targets[:, 0])
                 loss_aux16 = criterion_aux16(outputs[1], targets[:, 0])
                 loss_aux32 = criterion_aux32(outputs[2], targets[:, 0])
-                loss = loss_principal + loss_aux16 + loss_aux32
+                loss = loss_principal + 0.4 * loss_aux16 + 0.4 * loss_aux32
             else:   # for ERFNet and ENet
                 loss = criterion(outputs, targets[:, 0])
 
