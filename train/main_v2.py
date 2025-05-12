@@ -247,6 +247,9 @@ def train(args, model, enc=False):
         board = Dashboard(args.port)
 
     for epoch in range(start_epoch, args.num_epochs+1):
+        # stop training if stop_epoch is reached (for elegant resume in notebook)
+        if epoch > args.stop_epoch:
+            break
         print("----- TRAINING - EPOCH", epoch, "-----")
 
         scheduler.step()    
@@ -599,6 +602,7 @@ if __name__ == '__main__':
     parser.add_argument('--datadir', default=os.getenv("HOME") + "/datasets/cityscapes/")
     parser.add_argument('--height', type=int, default=512)
     parser.add_argument('--num-epochs', type=int, default=150)
+    parser.add_argument('--stop-epoch', type=int, default=150)
     parser.add_argument('--num-workers', type=int, default=2)   # 4
     parser.add_argument('--batch-size', type=int, default=6)
     parser.add_argument('--steps-loss', type=int, default=50)
