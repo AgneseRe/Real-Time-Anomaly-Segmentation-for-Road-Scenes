@@ -19,13 +19,14 @@ from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curv
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../train')))
 
+# Import networks
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from train.erfnet import ERFNet
 from train.bisenet import BiSeNet
 from train.enet import ENet
 
-seed = 42
-
 # general reproducibility
+seed = 42
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
