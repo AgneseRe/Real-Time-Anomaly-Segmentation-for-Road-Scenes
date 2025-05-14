@@ -60,7 +60,7 @@ class BiSeNetTransform(object):
     NOTE: Augmentations have been rewritten using PIL and torchvision to be memory-safe 
     (no OpenCV or NumPy as in the official version), reducing the risk of CUDA OOM errors.
     """
-    def __init__(self, augment=True, height=512, scales=(0.75, 1.25)):  # 2.0
+    def __init__(self, augment=True, height=512, scales=(0.75, 2.0)): 
         self.augment = augment
         self.height = height
         self.scales = scales
