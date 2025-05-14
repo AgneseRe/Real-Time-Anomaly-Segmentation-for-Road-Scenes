@@ -19,9 +19,9 @@ from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curv
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../train')))
 
-from erfnet import ERFNet
-# from bisenet import BiSeNet
-# from enet import ENet
+from train.erfnet import ERFNet
+from train.bisenet import BiSeNet
+from train.enet import ENet
 
 seed = 42
 
@@ -83,7 +83,12 @@ def main():
     # print ("Loading model: " + modelpath)         # for ERFNet ../trained_models/erfnet.py
     # print ("Loading weights: " + weightspath)     # for ERFNet ../trained_models/erfnet_pretrained.pth
 
-    model = ERFNet(NUM_CLASSES) #TODO: aggiungere altri modelli
+    if args.loadModel == "erfnet":
+        model = ERFNet(NUM_CLASSES) 
+    elif args.loadModel == "bisenet":
+        model = BiSeNet(NUM_CLASSES)
+    elif args.loadModel == "enet":
+        model = ENet(NUM_CLASSES)
 
     if (not args.cpu):
         model = torch.nn.DataParallel(model).cuda()
@@ -110,7 +115,10 @@ def main():
         # images = images.permute(0,3,1,2)
         images = image_transform(Image.open(path).convert('RGB')).unsqueeze(0).float().cuda()
         with torch.no_grad():
-            result = model(images).squeeze(0)
+            if args.loadModel == "bisenet":
+                result = model(images)[0].squeeze(0)
+            else:
+                result = model(images).squeeze(0)
         # print(result.shape) torch.Size([20, 512, 1024])
 
         # methods
@@ -192,8 +200,8 @@ def main():
                 file_name=f"PR_curve_{args.method}_{args.loadModel}")
         plot_roc(val_out, val_label, title="ROC Curve", save_dir=args.plotdir, 
                 file_name=f"ROC_curve_{args.method}_{args.loadModel}")
-        plot_barcode(val_out, val_label, title="Barcode Plot", save_dir=args.plotdir, 
-                file_name=f"ROC_curve_{args.method}_{args.loadModel}")
+        # plot_barcode(val_out, val_label, title="Barcode Plot", save_dir=args.plotdir, 
+        #         file_name=f"ROC_curve_{args.method}_{args.loadModel}")
 
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
