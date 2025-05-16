@@ -96,6 +96,8 @@ def main():
 
     def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
         own_state = model.state_dict()
+        # print(own_state.keys())
+        # print(state_dict.keys())
         for name, param in state_dict.items():
             if name not in own_state:
                 if name.startswith("module."):
@@ -107,7 +109,9 @@ def main():
                 own_state[name].copy_(param)
         return model
 
-    model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage, weights_only=True))
+    checkpoint = torch.load(weightspath, map_location=lambda storage, loc: storage)
+    state_dict = checkpoint['state_dict'] if 'state_dict' in checkpoint else checkpoint
+    model = load_my_state_dict(model, state_dict)
     # print ("Model and weights LOADED successfully")
     model.eval()
     
