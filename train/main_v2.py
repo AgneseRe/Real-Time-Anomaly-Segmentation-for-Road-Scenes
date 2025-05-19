@@ -41,8 +41,6 @@ NUM_CLASSES = 20    # Cityscapes dataset (19 + 1)
 color_transform = Colorize(NUM_CLASSES)
 image_transform = ToPILImage()
 
-# TODO: Model ensemble
-
 # ========== TRAIN FUNCTION ==========
 def train(args, model, enc=False):
     """
@@ -478,8 +476,70 @@ def save_checkpoint(state, is_best, filenameCheckpoint, filenameBest):
         print ("Saving model as best")
         torch.save(state, filenameBest)
 
+def ensemble_inference(args):
+
+    def load_model(model_name, class_name, weight_path):
+        model_file = importlib.import_module(model_name)
+        model = getattr(model_file, class_name)(NUM_CLASSES)
+        checkpoint = torch.load(weight_path, map_location="cuda" if args.cuda else "cpu")
+        state_dict = checkpoint['state_dict'] if 'state_dict' in checkpoint else checkpoint
+        new_state = {k.replace("module.", ""): v for k, v in state_dict.items()}
+        model.load_state_dict(new_state, strict=False)
+        model = torch.nn.DataParallel(model)
+        if args.cuda:
+            model = model.cuda()
+        model.eval()
+        return model
+
+    print("Loading ensemble models...")
+    erfnet = load_model("erfnet", "ERFNet", "../save/erfnet_training_void/model_best.pth")
+    enet = load_model("enet", "ENet", "../save/enet_training_void/model_best.pth")
+    bisenet = load_model("bisenet", "BiSeNet", "../save/bisenet_training_void/model_best.pth")
+
+    # Use BiSeNet transforms for consistent size
+    transform = BiSeNetTransform(augment=False)
+    val_dataset = cityscapes(args.datadir, transform, 'val')
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=2)
+
+    iouEval_ensemble = iouEval(NUM_CLASSES)
+
+    print("Running ensemble inference...")
+    with torch.no_grad():
+        for images, labels in val_loader:
+            if args.cuda:
+                images = images.cuda()
+                labels = labels.cuda()
+
+            out_erfnet = erfnet(images)
+            out_enet = enet(images)
+            out_bisenet = bisenet(images)[0]  # first output is main one
+
+            # Convert to probabilities
+            p_erfnet = torch.softmax(out_erfnet, dim=1)
+            p_enet = torch.softmax(out_enet, dim=1)
+            p_bisenet = torch.softmax(out_bisenet, dim=1)
+
+            # Average predictions (soft voting)
+            avg_probs = (p_erfnet + p_enet + p_bisenet) / 3.0
+            pred = avg_probs.argmax(dim=1, keepdim=True)
+
+            iouEval_ensemble.addBatch(pred.data, labels.data)
+
+    iou, per_class = iouEval_ensemble.getIoU()
+    print(f"\n==> Ensemble mIoU: {iou:.4f}")
+    print("Per-class IoU:")
+    for idx, i in enumerate(per_class):
+        print(f"Class {idx}: {i:.4f}")
+
 
 def main(args):
+
+    # ============ MODEL ENSEMBLE ============
+    if args.ensemble:
+        print("========== ENSEMBLE INFERENCE ===========")
+        ensemble_inference(args)
+        return
+    
     savedir = f'../save/{args.savedir}'
 
     if not os.path.exists(savedir):
@@ -517,7 +577,7 @@ def main(args):
                     if own_state[stripped_name].size() == param.size():
                         own_state[stripped_name].copy_(param)
                     elif "conv_out" in stripped_name:
-                        # Gestisce mismatch di dimensioni per conv_out
+                        # handles mismatches dimension conv_out
                         new_param = torch.zeros_like(own_state[stripped_name])
                         new_param[:param.size(0)] = param
                         own_state[stripped_name].copy_(new_param)
@@ -582,7 +642,6 @@ def main(args):
     print("========== TRAINING FINISHED ===========")
 
 
-
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--cuda', action='store_true', default=True)  #NOTE: cpu-only has not been tested so you might have to change code if you deactivate this flag
@@ -608,9 +667,10 @@ if __name__ == '__main__':
     parser.add_argument('--iouVal', action='store_true', default=True)  
     parser.add_argument('--resume', action='store_true')    # Use this flag to load last checkpoint for training  
 
-    parser.add_argument('--loss', default='ce', choices=['ce', 'focal', 'isomaxplus', 'comb_icf', 'comb_all'])
+    parser.add_argument('--loss', default='ce') # 'ce', 'focal', 'isomaxplus'
     parser.add_argument('--logit_norm', action='store_true', default=False) # Logit normalization
     parser.add_argument('--FineTune', action='store_true', default=False)
     parser.add_argument('--loadWeights', default='erfnet_pretrained.pth')
+    parser.add_argument('--ensemble', action='store_true', default=False, help="Run ensemble inference only")
 
     main(parser.parse_args())
