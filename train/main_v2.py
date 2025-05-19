@@ -121,7 +121,7 @@ def train(args, model, enc=False):
         
         # CE + Logit Normalization or Focal + Logit Normalization
         if args.logit_norm:
-            base_loss = LogitNormLoss(loss_function=base_loss)
+            base_loss = LogitNormLoss(loss=base_loss)
 
         return base_loss
     
