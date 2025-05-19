@@ -75,13 +75,16 @@ def train(args, model, enc=False):
     loader_val = DataLoader(dataset_val, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
     # ========== CLASS WEIGHTS ==========
-    if args.model == "erfnet":
-        mode = "encoder" if enc else "decoder"
-        if not os.path.exists(f"./utils/class_distribution/erfnet_class_weights_{mode}.npy"):
-            print("Calculating class weights...")
-            weights = calculate_erfnet_weights(loader, NUM_CLASSES, enc)
-        else:
-            weights = torch.tensor(np.load(f"./utils/class_distribution/erfnet_class_weights_{mode}.npy"))
+    if args.model == "erfnet" or args.model == "erfnet_isomaxplus":
+        if args.class_weights == "hard":
+            weights = calculate_erfnet_weights_hard(enc, NUM_CLASSES)
+        else:   # by processing dataset histogram
+            mode = "encoder" if enc else "decoder"
+            if not os.path.exists(f"./utils/class_distribution/erfnet_class_weights_{mode}.npy"):
+                print("Calculating class weights...")
+                weights = calculate_erfnet_weights(loader, NUM_CLASSES, enc)
+            else:
+                weights = torch.tensor(np.load(f"./utils/class_distribution/erfnet_class_weights_{mode}.npy"))
     elif args.model == "enet":
         if not os.path.exists("./utils/class_distribution/enet_class_weights.npy"):
             print("Calculating class weights...")
@@ -671,6 +674,7 @@ if __name__ == '__main__':
     parser.add_argument('--logit_norm', action='store_true', default=False) # Logit normalization
     parser.add_argument('--FineTune', action='store_true', default=False)
     parser.add_argument('--loadWeights', default='erfnet_pretrained.pth')
+    parser.add_argument('--class-weights', default='hard') # Use hard weights or calculating by hist for ERFNet
     parser.add_argument('--ensemble', action='store_true', default=False, help="Run ensemble inference only")
 
     main(parser.parse_args())
