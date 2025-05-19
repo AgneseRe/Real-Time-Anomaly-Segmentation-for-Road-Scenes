@@ -484,7 +484,7 @@ def ensemble_inference(args):
     def load_model(model_name, class_name, weight_path):
         model_file = importlib.import_module(model_name)
         model = getattr(model_file, class_name)(NUM_CLASSES)
-        checkpoint = torch.load(weight_path, map_location="cuda" if args.cuda else "cpu")
+        checkpoint = torch.load(weight_path, map_location="cuda" if args.cuda else "cpu", weights_only=False)
         state_dict = checkpoint['state_dict'] if 'state_dict' in checkpoint else checkpoint
         new_state = {k.replace("module.", ""): v for k, v in state_dict.items()}
         model.load_state_dict(new_state, strict=False)
@@ -500,15 +500,15 @@ def ensemble_inference(args):
     bisenet = load_model("bisenet", "BiSeNet", "../save/bisenet_training_void/model_best.pth")
 
     # Use BiSeNet transforms for consistent size
-    transform = BiSeNetTransform(augment=False)
-    val_dataset = cityscapes(args.datadir, transform, 'val')
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=2)
+    co_transform_val = BiSeNetTransform(augment=False)
+    dataset_val = cityscapes(args.datadir, co_transform_val, 'val')
+    loader_val = DataLoader(dataset_val, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
     iouEval_ensemble = iouEval(NUM_CLASSES)
 
     print("Running ensemble inference...")
     with torch.no_grad():
-        for images, labels in val_loader:
+        for images, labels in loader_val:
             if args.cuda:
                 images = images.cuda()
                 labels = labels.cuda()
@@ -567,7 +567,7 @@ def main(args):
     else:   # ENet
         model = model_file.ENet(NUM_CLASSES)
 
-    copyfile(args.model + ".py", savedir + '/' + args.model + ".py")
+    # copyfile(args.model + ".py", savedir + '/' + args.model + ".py")
     
     # weights for fine tuning 
     if args.FineTune:
