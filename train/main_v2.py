@@ -41,6 +41,8 @@ NUM_CLASSES = 20    # Cityscapes dataset (19 + 1)
 color_transform = Colorize(NUM_CLASSES)
 image_transform = ToPILImage()
 
+# TODO: Model ensemble and correct losses
+
 # Mean computation for data normalization ([0.2869, 0.3251, 0.2839])
 def compute_cs_mean(dataset_path, num_workers, batch_size):
     """
@@ -625,7 +627,7 @@ if __name__ == '__main__':
     parser.add_argument('--iouVal', action='store_true', default=True)  
     parser.add_argument('--resume', action='store_true')    # Use this flag to load last checkpoint for training  
 
-    parser.add_argument('--loss', default='ce', choices=['ce', 'focal', 'isomaxplus'])
+    parser.add_argument('--loss', default='ce', choices=['ce', 'focal', 'isomaxplus', 'comb_icf', 'comb_all'])
     parser.add_argument('--logit_norm', action='store_true', default=False) # Logit normalization
     parser.add_argument('--FineTune', action='store_true', default=False)
     parser.add_argument('--loadWeights', default='erfnet_pretrained.pth')
