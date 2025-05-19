@@ -1,21 +1,19 @@
+# =====================================================================================
+# Mitigating Neural Network Overconfidence with Logit Normalization
+# GitHub: https://github.com/hongxin001/logitnorm_ood/blob/main/common/loss_function.py
+# =====================================================================================
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 class LogitNormLoss(nn.Module):
-    # TODO: implement logit norm loss
-    def __init__(self, reduction='mean'):
+
+    def __init__(self, device, t=1.0):
         super(LogitNormLoss, self).__init__()
-        self.reduction = reduction
-        
-    def forward(self, inputs, targets):
-        
-        # Normalize the logits
-        inputs = F.normalize(inputs, p=1, dim=1)
-        
-        # Compute the loss
-        loss = F.binary_cross_entropy(inputs, targets, reduction=self.reduction)
-        
-        return loss
-    
-    
+        self.device = device
+        self.t = t
+
+    def forward(self, x, target):
+        norms = torch.norm(x, p=2, dim=-1, keepdim=True) + 1e-7
+        logit_norm = torch.div(x, norms) / self.t
+        return F.cross_entropy(logit_norm, target)

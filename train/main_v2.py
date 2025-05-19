@@ -26,9 +26,10 @@ from shutil import copyfile
 # Import loss functions
 from utils.losses.focal_loss import FocalLoss
 from utils.losses.ohem_ce_loss import OhemCELoss
+from utils.losses.combined_loss import CombinedLoss
 from utils.losses.ce_loss import CrossEntropyLoss2d
 from utils.losses.logit_norm_loss import LogitNormLoss
-from utils.losses.isomax_plus_loss import IsoMaxPlusLossSecondPart, IsoMaxPlusLossFirstPart
+from utils.losses.isomax_plus_loss import IsoMaxPlusLossSecondPart
 
 # Import functions for class weights computation and data augmentation
 from utils.weights import calculate_enet_weights, calculate_erfnet_weights, calculate_erfnet_weights_hard
@@ -133,29 +134,36 @@ def train(args, model, enc=False):
             print(weights)
     
     # ========== LOSS FUNCTION ==========
-    if args.model == "erfnet_isomaxplus":
-        if args.loss == "focal":
-            criterion = FocalLoss() # IsomaxPlus loss + Focal loss
-        else:
-            criterion = IsoMaxPlusLossSecondPart()  # IsoMaxPlus loss + Cross Entropy loss
-    elif args.model == "erfnet":
-        if args.loss == "isomaxplus":
-            raise ValueError("IsoMaxPlus loss is available for the erfnet_isomaxplus model")
-        if args.loss == "ce":   # Cross Entropy Loss
-            criterion = CrossEntropyLoss2d(weights)
-        elif args.loss == "focal":  # Focal Loss
-            criterion = FocalLoss()
+    if args.model == "erfnet":
+        if args.loss == "focal":    # Focal Loss
+            base_loss = FocalLoss()
+        elif args.loss == "ce":     # Cross Entropy Loss
+            base_loss = CrossEntropyLoss2d(weights)
+        elif args.loss == "isomaxplus":
+            raise ValueError("IsoMaxPlus loss is only supported for 'erfnet_isomaxplus' model")
         
-        if args.logit_norm: # Logit Normalization
-            criterion = LogitNormLoss(loss_function = criterion)
-        print(f"ERFNet criterion: {type(criterion)}")
+        # CE + Logit Normalization or Focal + Logit Normalization
+        if args.logit_norm: 
+            criterion = LogitNormLoss(loss_function=base_loss)
+        else:
+            criterion = base_loss
+    elif args.model == "erfnet_isomaxplus":
+        if args.loss == "focal":
+            base_loss = FocalLoss() # IsomaxPlus Loss + Focal Loss
+            if args.logit_norm: 
+                base_loss = LogitNormLoss(loss_function=base_loss)
+
+        iso_loss = IsoMaxPlusLossSecondPart()  # IsoMaxPlus loss + Cross Entropy loss
+
+        criterion = CombinedLoss(base_loss, iso_loss)
     elif args.model == "enet":
         criterion = CrossEntropyLoss2d(weights)
-    else:   # BiSeNet 
-        # hard examples loss value greater than 0.7 by default
+    else:   # BiSeNet hard examples loss value greater than 0.7 by default
         criterion_principal = OhemCELoss()
         criterion_aux16 = OhemCELoss()
         criterion_aux32 = OhemCELoss()
+
+    print(f"Criterion: {type(criterion)}")
 
     savedir = f'../save/{args.savedir}'
 
@@ -617,8 +625,8 @@ if __name__ == '__main__':
     parser.add_argument('--iouVal', action='store_true', default=True)  
     parser.add_argument('--resume', action='store_true')    # Use this flag to load last checkpoint for training  
 
-    parser.add_argument('--loss', default='ce') # ["ce", "focal", "isomaxplus"]
-    parser.add_argument('--logit_norm', action='store_true', default=False)
+    parser.add_argument('--loss', default='ce', choices=['ce', 'focal', 'isomaxplus'])
+    parser.add_argument('--logit_norm', action='store_true', default=False) # Logit normalization
     parser.add_argument('--FineTune', action='store_true', default=False)
     parser.add_argument('--loadWeights', default='erfnet_pretrained.pth')
 

@@ -1,4 +1,8 @@
-# Code from: https://github.com/clcarwin/focal_loss_pytorch/blob/master/focalloss.py
+# =====================================================================================
+# Focal Loss for Dense Object Detection in PyTorch
+# GitHub: https://github.com/clcarwin/focal_loss_pytorch/blob/master/focalloss.py
+# =====================================================================================
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

@@ -1,8 +1,11 @@
+# =============================================================================================================================================
+# IsoMaxPlus Loss Integration. Entropic Out-of-Distribution Detection
+# GitHub: https://github.com/dlmacedo/entropic-out-of-distribution-detection/blob/9ad451ca815160e5339dc21319cea2b859e3e101/losses/isomaxplus.py
+# =============================================================================================================================================
+
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
-
-# Code: https://github.com/dlmacedo/entropic-out-of-distribution-detection/blob/9ad451ca815160e5339dc21319cea2b859e3e101/losses/isomaxplus.py
 
 class IsoMaxPlusLossFirstPart(nn.Module):
     """ This part replaces the model classifier output layer nn.Linear() """
@@ -30,12 +33,8 @@ class IsoMaxPlusLossSecondPart(nn.Module):
         self.entropic_scale = entropic_scale
 
     def forward(self, logits, targets, debug=False):
-        #############################################################################
-        #############################################################################
         """Probabilities and logarithms are calculated separately and sequentially"""
         """Therefore, nn.CrossEntropyLoss() must not be used to calculate the loss"""
-        #############################################################################
-        #############################################################################
         distances = -logits
         probabilities_for_training = nn.Softmax(dim=1)(-self.entropic_scale * distances)
         probabilities_at_targets = probabilities_for_training[range(distances.size(0)), targets]
