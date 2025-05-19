@@ -41,44 +41,7 @@ NUM_CLASSES = 20    # Cityscapes dataset (19 + 1)
 color_transform = Colorize(NUM_CLASSES)
 image_transform = ToPILImage()
 
-# TODO: Model ensemble and correct losses
-
-# Mean computation for data normalization ([0.2869, 0.3251, 0.2839])
-def compute_cs_mean(dataset_path, num_workers, batch_size):
-    """
-    Compute per-channel pixel values mean (RGB) over all images in the train subset
-    of cityscapes. The computed mean is used to normalize the data before the training.
-
-    Parameters:
-        - dataset_path (str): The path to the Cityscapes dataset.
-        - num_workers (int): The number of workers to use for data loading.
-        - batch_size (int): The batch size to use when loading the data.
-
-    Returns:
-        list: A list of three float values representing the mean for the R, G, B channels.
-    """
-
-    if os.path.exists("./utils/cityscapes_mean.npy"):
-        return np.load("./utils/cityscapes_mean.npy").tolist()
-    else:
-        # if mean not yet computed
-        dataset = cityscapes(dataset_path, co_transform=None, subset='train')
-        loader = DataLoader(dataset, num_workers=num_workers, batch_size=batch_size, shuffle=True)
-        
-        total_images = 0  # 2795
-        cs_mean = torch.zeros(3)
-
-        for images, _ in loader:
-            batch_images = images.size(0)  # (batch_size, channels, height, width)
-            total_images += batch_images
-            cs_mean += images.mean(dim=[0, 2, 3]) * batch_images
-        cs_mean = cs_mean / total_images
-
-        # Save mean values in file for future computation
-        np.save("./utils/cityscapes_mean.npy", cs_mean.numpy())
-      
-        return cs_mean.tolist()
-    
+# TODO: Model ensemble
 
 # ========== TRAIN FUNCTION ==========
 def train(args, model, enc=False):
@@ -134,28 +97,46 @@ def train(args, model, enc=False):
         if args.cuda:
             weights = weights.cuda()
             print(weights)
-    
+
     # ========== LOSS FUNCTION ==========
-    if args.model == "erfnet":
+    def get_base_loss(args, weights=None):
+        """
+        Get the base loss function for training based on provided arguments.
+
+        Parameters:
+            - args (argparse.Namespace): Configuration object containing attributes for training.
+                It must contain the loss function to use and the logit normalization flag.
+            - weights (torch.Tensor, optional): Class weights for the loss function. Default is None.
+
+        Returns:
+            - nn.Module: A loss function module based on the specified configuration.
+        """
         if args.loss == "focal":    # Focal Loss
             base_loss = FocalLoss()
         elif args.loss == "ce":     # Cross Entropy Loss
             base_loss = CrossEntropyLoss2d(weights)
-        elif args.loss == "isomaxplus":
-            raise ValueError("IsoMaxPlus loss is only supported for 'erfnet_isomaxplus' model")
+        else:
+            raise ValueError(f"Unsupported loss function: {args.loss}")
         
         # CE + Logit Normalization or Focal + Logit Normalization
-        if args.logit_norm: 
-            criterion = LogitNormLoss(loss_function=base_loss)
-        else:
-            criterion = base_loss
-    elif args.model == "erfnet_isomaxplus":
-        if args.loss == "focal":
-            base_loss = FocalLoss() # IsomaxPlus Loss + Focal Loss
-            if args.logit_norm: 
-                base_loss = LogitNormLoss(loss_function=base_loss)
+        if args.logit_norm:
+            base_loss = LogitNormLoss(loss_function=base_loss)
 
-        iso_loss = IsoMaxPlusLossSecondPart()  # IsoMaxPlus loss + Cross Entropy loss
+        return base_loss
+    
+    # Set the loss function based on the model and arguments
+    if args.model == "erfnet":
+        if args.loss == "isomaxplus":
+            raise ValueError("IsoMaxPlus loss is only supported with 'erfnet_isomaxplus' model")
+        
+        criterion = get_base_loss(args, weights)
+
+    elif args.model == "erfnet_isomaxplus":
+        if args.loss not in ["ce", "focal"]:
+            raise ValueError(f"IsoMaxPlus must be combined with 'ce' or 'focal', not: {args.loss}")
+    
+        base_loss = get_base_loss(args, weights)
+        iso_loss = IsoMaxPlusLossSecondPart()
 
         criterion = CombinedLoss(base_loss, iso_loss)
     elif args.model == "enet":
