@@ -22,7 +22,12 @@ class ErfNetTransform(object):
         self.augment = augment
         self.height = height
 
-    def __call__(self, input, target):
+    def __call__(self, input, target, seed=None):
+        # Set seed for reproducibility
+        if seed is not None:
+          random.seed(seed)
+          np.random.seed(seed)
+
         # do something to both images
         input =  Resize(self.height, Image.BILINEAR)(input)
         target = Resize(self.height, Image.NEAREST)(target)
@@ -120,7 +125,12 @@ class ENetTransform(object):
         self.augment = augment
         self.height = height
 
-    def __call__(self, input, target):
+    def __call__(self, input, target, seed=None):
+        # Set seed for reproducibility
+        if seed is not None:
+          random.seed(seed)
+          np.random.seed(seed)
+          
         input = Resize(self.height, Image.BILINEAR)(input)
         target = Resize(self.height, Image.NEAREST)(target)
 

@@ -97,7 +97,7 @@ def train(args, model, enc=False):
     if weights is not None:
         if args.cuda:
             weights = weights.cuda()
-            print(weights)
+            # print(weights)
 
     # ========== LOSS FUNCTION ==========
     def get_base_loss(args, weights=None):
