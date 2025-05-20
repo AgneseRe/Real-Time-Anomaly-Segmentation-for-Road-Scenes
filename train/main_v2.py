@@ -113,7 +113,7 @@ def train(args, model, enc=False):
             - nn.Module: A loss function module based on the specified configuration.
         """
         if args.loss == "focal":    # Focal Loss
-            base_loss = FocalLoss()
+            base_loss = FocalLoss(gamma=2.0, alpha=weights)
         elif args.loss == "ce":     # Cross Entropy Loss
             base_loss = CrossEntropyLoss2d(weights)
         else:
@@ -528,11 +528,26 @@ def ensemble_inference(args):
 
             iouEval_ensemble.addBatch(pred.data, labels.data)
 
-    iou, per_class = iouEval_ensemble.getIoU()
-    print(f"\n==> Ensemble mIoU: {iou:.4f}")
-    print("Per-class IoU:")
-    for idx, i in enumerate(per_class):
-        print(f"Class {idx}: {i:.4f}")
+        iouVal, iou_classes = iouEval_ensemble.getIoU()
+
+        class_names = [
+            "Road", "Sidewalk", "Building", "Wall", "Fence", "Pole", "Traffic Light",
+            "Traffic Sign", "Vegetation", "Terrain", "Sky", "Person", "Rider", "Car",
+            "Truck", "Bus", "Train", "Motorcycle", "Bicycle"
+        ]
+
+        iou_classes_str = []
+        for i in range(iou_classes.size(0)):
+            iouStr = getColorEntry(iou_classes[i]) + '{:0.2f}'.format(iou_classes[i]*100) + '\033[0m'
+            iou_classes_str.append(iouStr)
+
+        print("=======================================")
+        print("Per-Class IoU:")
+        for idx, name in enumerate(class_names):
+            print(f"{iou_classes_str[idx]} {name}")
+        print("=======================================")
+        meanIoUStr = getColorEntry(iouVal) + '{:0.2f}'.format(iouVal*100) + '\033[0m'
+        print("Ensemble MEAN IoU:", meanIoUStr, "%")
 
 
 def main(args):
