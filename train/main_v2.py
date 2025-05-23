@@ -147,7 +147,7 @@ def train(args, model, enc=False):
         criterion_aux16 = OhemCELoss()
         criterion_aux32 = OhemCELoss()
 
-    print(f"Criterion: {type(criterion)}")
+    print(f"Criterion: {type(criterion_principal) if args.model == 'bisenet' else type(criterion)}")
 
     savedir = f'../save/{args.savedir}'
 
