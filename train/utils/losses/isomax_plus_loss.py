@@ -1,6 +1,9 @@
 # =============================================================================================================================================
 # IsoMaxPlus Loss Integration. Entropic Out-of-Distribution Detection
 # GitHub: https://github.com/dlmacedo/entropic-out-of-distribution-detection/blob/9ad451ca815160e5339dc21319cea2b859e3e101/losses/isomaxplus.py
+#
+# This code is a modification of the original IsoMaxPlus loss implementation, adapted to semantic segmentation tasks. Changes include flattening
+# and broadcasting to support spatial feature maps with shape [B, C, H, W], Batch size B, number of classes C, height H, and width W.
 # =============================================================================================================================================
 
 import torch.nn as nn
@@ -20,8 +23,12 @@ class IsoMaxPlusLossFirstPart(nn.Module):
         nn.init.constant_(self.distance_scale, 1.0)
 
     def forward(self, features):
-        distances = torch.abs(self.distance_scale) * torch.cdist(F.normalize(features), F.normalize(self.prototypes), p=2.0, compute_mode="donot_use_mm_for_euclid_dist")
-        logits = -distances
+        B, _, H, W = features.size()
+        features_flat = features.permute(0, 2, 3, 1).flatten(0, 2)  # [B*H*W, C]
+        features_norm = F.normalize(features_flat)
+        prototypes_norm = F.normalize(self.prototypes)
+        distances = torch.abs(self.distance_scale) * torch.cdist(features_norm, prototypes_norm, p=2.0, compute_mode="donot_use_mm_for_euclid_dist")
+        logits = -distances.view(B, H, W, self.num_classes).permute(0, 3, 1, 2)  # [B, num_classes, H, W]
         # The temperature may be calibrated after training to improve uncertainty estimation.
         return logits / self.temperature
 
@@ -35,6 +42,9 @@ class IsoMaxPlusLossSecondPart(nn.Module):
     def forward(self, logits, targets, debug=False):
         """Probabilities and logarithms are calculated separately and sequentially"""
         """Therefore, nn.CrossEntropyLoss() must not be used to calculate the loss"""
+        B, _, H, W = logits.size()
+        logits = logits.permute(0, 2, 3, 1).flatten(0, 2)  # [B*H*W, num_classes]
+        targets = targets.view(-1)  # [B*H*W]
         distances = -logits
         probabilities_for_training = nn.Softmax(dim=1)(-self.entropic_scale * distances)
         probabilities_at_targets = probabilities_for_training[range(distances.size(0)), targets]
