@@ -29,7 +29,7 @@ from utils.losses.ohem_ce_loss import OhemCELoss
 from utils.losses.combined_loss import CombinedLoss
 from utils.losses.ce_loss import CrossEntropyLoss2d
 from utils.losses.logit_norm_loss import LogitNormLoss
-from utils.losses.isomax_plus_loss import IsoMaxPlusLossVanilla
+from utils.losses.isomax_plus_loss import IsoMaxPlusLossSecondPart
 
 # Import functions for class weights computation and data augmentation
 from utils.weights import calculate_enet_weights, calculate_erfnet_weights, calculate_erfnet_weights_hard
@@ -100,55 +100,36 @@ def train(args, model, enc=False):
             # print(weights)
 
     # ========== LOSS FUNCTION ==========
-    def get_base_loss(args, weights=None):
-        """
-        Get the base loss function for training based on provided arguments.
-
-        Parameters:
-            - args (argparse.Namespace): Configuration object containing attributes for training.
-                It must contain the loss function to use and the logit normalization flag.
-            - weights (torch.Tensor, optional): Class weights for the loss function. Default is None.
-
-        Returns:
-            - nn.Module: A loss function module based on the specified configuration.
-        """
-        if args.loss == "focal":    # Focal Loss
-            base_loss = FocalLoss(gamma=2.0, alpha=weights)
-        elif args.loss == "ce":     # Cross Entropy Loss
-            base_loss = CrossEntropyLoss2d(weights)
-        else:
-            raise ValueError(f"Unsupported loss function: {args.loss}")
-        
-        # CE + Logit Normalization or Focal + Logit Normalization
-        if args.logit_norm:
-            base_loss = LogitNormLoss(loss=base_loss)
-
-        return base_loss
-    
-    # Set the loss function based on the model and arguments
     if args.model == "erfnet":
         if args.loss == "ce":
             criterion = CrossEntropyLoss2d(weights)
         elif args.loss == "f":
             criterion = FocalLoss(gamma=2.0, alpha=weights)
-        elif args.loss == "eim":
-            criterion = IsoMaxPlusLossVanilla(entropic_scale=10.0)
         elif args.loss == "cef":
             criterion = CombinedLoss(
                 ce_loss=CrossEntropyLoss2d(weights),
                 focal_loss=FocalLoss(gamma=2.0, alpha=weights),
                 alpha=1/2, beta=1/2, gamma=0.0)
+        elif args.loss == "eim" or args.loss == "ceim" or args.loss == "cefeim":
+            raise ValueError("IsoMaxPlus loss is not supported for ERFNet. Use 'erfnet_isomaxplus' model instead.")
+        else:
+            raise ValueError(f"Unsupported loss function: {args.loss}")
+    elif args.model == "erfnet_isomaxplus":
+        if args.loss == "eim":
+            criterion = IsoMaxPlusLossSecondPart(entropic_scale=10.0)
         elif args.loss == "ceim":
             criterion = CombinedLoss(
                 ce_loss=CrossEntropyLoss2d(weights),
-                eim_loss=IsoMaxPlusLossVanilla(entropic_scale=10.0),
+                eim_loss=IsoMaxPlusLossSecondPart(entropic_scale=10.0),
                 alpha=1/2, beta=0.0, gamma=1/2)
         elif args.loss == "cefeim":
             criterion = CombinedLoss(
                 ce_loss=CrossEntropyLoss2d(weights),
                 focal_loss=FocalLoss(gamma=2.0, alpha=weights),
-                eim_loss=IsoMaxPlusLossVanilla(entropic_scale=10.0),
+                eim_loss=IsoMaxPlusLossSecondPart(entropic_scale=10.0),
                 alpha=1/3, beta=1/3, gamma=1/3)
+        elif args.loss == "ce" or args.loss == "f" or args.loss == "cef":
+            raise ValueError("Cross Entropy and Focal Losses are not supported for ERFNet IsoMaxPlus. Use 'erfnet' model instead.")
         else:
             raise ValueError(f"Unsupported loss function: {args.loss}")
         if args.logit_norm: # Logit Normalization

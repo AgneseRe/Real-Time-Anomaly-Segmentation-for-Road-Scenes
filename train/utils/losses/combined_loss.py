@@ -29,7 +29,7 @@ class CombinedLoss(nn.Module):
 
     def forward(self, output, target):
         """
-        Computes the weighted sum of the base and auxiliary loss functions.
+        Computes the weighted sum of the three loss functions.
 
         Parameters:
             - output (Tensor): Model predictions (logits or probabilities).
@@ -38,4 +38,15 @@ class CombinedLoss(nn.Module):
         Returns:
             Tensor: The combined loss value.
         """
-        return self.alpha * self.ce_loss(output, target) + self.beta * self.focal_loss(output, target) + self.gamma * self.eim_loss(output, target)
+        total_loss = 0.0
+
+        if self.ce_loss is not None:
+            total_loss += self.alpha * self.ce_loss(output, target)
+        
+        if self.focal_loss is not None:
+            total_loss += self.beta * self.focal_loss(output, target)
+        
+        if self.eim_loss is not None:
+            total_loss += self.gamma * self.eim_loss(output, target) 
+
+        return total_loss

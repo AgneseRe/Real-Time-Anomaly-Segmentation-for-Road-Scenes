@@ -58,17 +58,3 @@ class IsoMaxPlusLossSecondPart(nn.Module):
             intra_distances = intra_inter_distances[intra_inter_distances != float('Inf')]
             inter_distances = inter_intra_distances[inter_intra_distances != float('Inf')]
             return loss, 1.0, intra_distances, inter_distances
-        
-        
-class IsoMaxPlusLossVanilla(nn.Module):
-    def __init__(self, entropic_scale=10.0):
-        super(IsoMaxPlusLossVanilla, self).__init__()
-        self.entropic_scale = entropic_scale
-
-    def forward(self, outputs, targets):
-        distances = -outputs
-        probabilities_for_training = nn.Softmax(dim=1)(-self.entropic_scale * distances)
-        probabilities_at_targets = torch.gather(probabilities_for_training, 1, targets.unsqueeze(1))
-        probabilities_at_targets = torch.clamp(probabilities_at_targets, min=1e-7)
-        loss = -torch.log(probabilities_at_targets).mean()
-        return loss
