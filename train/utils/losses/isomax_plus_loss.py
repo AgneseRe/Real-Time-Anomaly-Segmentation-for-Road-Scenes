@@ -47,7 +47,7 @@ class IsoMaxPlusLossSecondPart(nn.Module):
         targets = targets.view(-1)  # [B*H*W]
         distances = -logits
         probabilities_for_training = nn.Softmax(dim=1)(-self.entropic_scale * distances)
-        probabilities_at_targets = probabilities_for_training[range(distances.size(0)), targets]
+        probabilities_at_targets = probabilities_for_training[range(distances.size(0)), targets] + 1e-12  # Add small value to avoid log(0)
         loss = -torch.log(probabilities_at_targets).mean()
         if not debug:
             return loss

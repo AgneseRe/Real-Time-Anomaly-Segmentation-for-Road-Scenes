@@ -50,3 +50,13 @@ class CombinedLoss(nn.Module):
             total_loss += self.gamma * self.eim_loss(output, target) 
 
         return total_loss
+    
+    def __str__(self):
+        attrs = []
+        if self.ce_loss:
+            attrs.append(f"CE(alpha={self.alpha})")
+        if self.focal_loss:
+            attrs.append(f"Focal(beta={self.beta})")
+        if self.eim_loss:
+            attrs.append(f"EIM(gamma={self.gamma})")
+        return "CombinedLoss(" + ", ".join(attrs) + ")"
