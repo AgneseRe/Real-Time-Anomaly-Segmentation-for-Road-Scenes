@@ -4,27 +4,28 @@ import torch
 
 class CombinedLoss(nn.Module):
     """
-    Combine two loss functions into a single loss with weighted contributions.
+    Combine three loss functions into a single loss with weighted contributions.
 
-    This class allows the combination of a primary loss function (e.g., CrossEntropyLoss or FocalLoss)
-    along with an auxiliary loss function (e.g., IsoMaxPlusLossSecondPart) during training. The combined 
-    loss is computed as a weighted sum of the two losses, where the weights can be adjusted.
-    
-    The final loss is computed as:
-        total_loss = alpha * base_loss + beta * iso_loss
+    This class combines a cross-entropy loss, a focal loss, and an EIM loss.
+    The combined loss is computed as a weighted sum of the individual losses:
+        total_loss = alpha * ce_loss + beta * focal_loss + gamma * eim_loss
     
     Parameters:
-        - base_loss (nn.Module): The primary loss function.
-        - iso_loss (nn.Module): The auxiliary loss function.
-        - alpha (float): Weight for the base_loss. Default is 1.0.
-        - beta (float): Weight for the iso_loss. Default is 1.0.
+        - ce_loss (nn.Module): Cross-entropy loss function.
+        - focal_loss (nn.Module): Focal loss function.
+        - eim_loss (nn.Module): EIM loss function.
+        - alpha (float): Weight for cross-entropy. Default is 1.0.
+        - beta (float): Weight for focal-loss. Default is 1.0.
+        - gamma (float): Weight for EIM loss. Default is 1.0.
     """
-    def __init__(self, base_loss, iso_loss, alpha = 1.0, beta = 1.0):
+    def __init__(self, ce_loss = None, focal_loss = None, eim_loss = None, alpha = 1.0, beta = 1.0, gamma = 1.0):
         super(CombinedLoss, self).__init__()
-        self.base_loss = base_loss
-        self.iso_loss = iso_loss
+        self.ce_loss = ce_loss
+        self.focal_loss = focal_loss
+        self.eim_loss = eim_loss
         self.alpha = alpha
         self.beta = beta
+        self.gamma = gamma
 
     def forward(self, output, target):
         """
@@ -37,4 +38,4 @@ class CombinedLoss(nn.Module):
         Returns:
             Tensor: The combined loss value.
         """
-        return self.alpha * self.base_loss(output, target) + self.beta * self.iso_loss(output, target)
+        return self.alpha * self.ce_loss(output, target) + self.beta * self.focal_loss(output, target) + self.gamma * self.eim_loss(output, target)
