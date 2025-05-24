@@ -133,13 +133,15 @@ def train(args, model, enc=False):
         criterion = get_base_loss(args, weights)
 
     elif args.model == "erfnet_isomaxplus":
-        if args.loss not in ["ce", "focal"]:
-            raise ValueError(f"IsoMaxPlus must be combined with 'ce' or 'focal', not: {args.loss}")
-    
-        base_loss = get_base_loss(args, weights)
-        iso_loss = IsoMaxPlusLossSecondPart()
+        if args.loss == "isomaxplus": # IsoMaxPlus loss used alone
+            criterion = IsoMaxPlusLossSecondPart()
+        elif args.loss not in ["ce", "focal"]:
+            raise ValueError(f"IsoMaxPlus must be combined with 'ce' or 'focal' when not used alone, not: {args.loss}")
+        else:   # IsoMaxPlus loss combined with CE or Focal Loss
+            base_loss = get_base_loss(args, weights)
+            iso_loss = IsoMaxPlusLossSecondPart()
+            criterion = CombinedLoss(base_loss, iso_loss)
 
-        criterion = CombinedLoss(base_loss, iso_loss)
     elif args.model == "enet":
         criterion = CrossEntropyLoss2d(weights)
     else:   # BiSeNet hard examples loss value greater than 0.7 by default
