@@ -86,6 +86,8 @@ def main():
 
     if args.loadModel == "erfnet":
         model = ERFNet(NUM_CLASSES) 
+    elif args.loadModel == "erfnet_isomaxplus":
+        model = ERFNet(NUM_CLASSES, use_isomaxplus=True)
     elif args.loadModel == "bisenet":
         model = BiSeNet(NUM_CLASSES)
     elif args.loadModel == "enet":
