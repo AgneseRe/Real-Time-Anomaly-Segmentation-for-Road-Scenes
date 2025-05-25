@@ -53,6 +53,9 @@ class OhemCELoss(nn.Module):
         if loss_hard.numel() < n_min:
             loss_hard, _ = loss.topk(n_min)
         return torch.mean(loss_hard)
+    
+    def __str__(self):
+        return f"OhemCELoss(thresh={self.thresh.item()})"
 
 
 if __name__ == '__main__':

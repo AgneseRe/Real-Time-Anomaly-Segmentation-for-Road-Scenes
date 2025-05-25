@@ -18,3 +18,6 @@ class LogitNormLoss(nn.Module):
         logit_norm = torch.div(x, norms) / self.t
         # return F.cross_entropy(logit_norm, target)
         return self.loss(logit_norm, target)
+    
+    def __str__(self):
+        return f"LogitNormLoss(loss={self.loss}, t={self.t})"

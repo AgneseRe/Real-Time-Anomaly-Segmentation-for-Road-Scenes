@@ -78,13 +78,15 @@ def train(args, model, enc=False):
     if args.model == "erfnet" or args.model == "erfnet_isomaxplus":
         if args.class_weights == "hard":
             weights = calculate_erfnet_weights_hard(enc, NUM_CLASSES)
-        else:   # by processing dataset histogram
+        elif args.class_weights == "hist":   # by processing dataset histogram
             mode = "encoder" if enc else "decoder"
             if not os.path.exists(f"./utils/class_distribution/erfnet_class_weights_{mode}.npy"):
                 print("Calculating class weights...")
                 weights = calculate_erfnet_weights(loader, NUM_CLASSES, enc)
             else:
                 weights = torch.tensor(np.load(f"./utils/class_distribution/erfnet_class_weights_{mode}.npy"))
+        else:
+            raise ValueError(f"Unsupported class weights option: {args.class_weights}. Only 'hard' and 'hist' are supported.")
     elif args.model == "enet":
         if not os.path.exists("./utils/class_distribution/enet_class_weights.npy"):
             print("Calculating class weights...")
@@ -141,7 +143,7 @@ def train(args, model, enc=False):
         criterion_aux16 = OhemCELoss()
         criterion_aux32 = OhemCELoss()
 
-    print(f"Criterion: {type(criterion_principal) if args.model == 'bisenet' else type(criterion)}")
+    print(f"Criterion: {type(criterion_principal) if args.model == 'bisenet' else criterion}")
 
     savedir = f'../save/{args.savedir}'
 

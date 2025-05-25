@@ -58,3 +58,6 @@ class IsoMaxPlusLossSecondPart(nn.Module):
             intra_distances = intra_inter_distances[intra_inter_distances != float('Inf')]
             inter_distances = inter_intra_distances[inter_intra_distances != float('Inf')]
             return loss, 1.0, intra_distances, inter_distances
+        
+    def __str__(self):
+        return f"IsoMaxPlusLossSecondPart(entropic_scale={self.entropic_scale})"
