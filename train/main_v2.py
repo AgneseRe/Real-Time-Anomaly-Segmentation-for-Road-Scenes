@@ -409,7 +409,7 @@ def train(args, model, enc=False):
             filenameBest = savedir + '/model_best.pth.tar'
 
         
-        if args.model == "efrnet_isomaxplus":
+        if args.model == "erfnet_isomaxplus":
             # only for saving also the loss first part dict
             save_checkpoint({
                 'epoch': epoch + 1,
