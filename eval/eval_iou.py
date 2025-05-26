@@ -56,8 +56,8 @@ def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() and not args.cpu else 'cpu')
     if args.model == "erfnet":
       model = ERFNet(NUM_CLASSES).to(device)
-    elif args.model == "erfnet_isomaxplus": #punto4
-      model = ERFNet(NUM_CLASSES, use_isomaxplus=True).to(device) #\punto4
+    elif args.model == "erfnet_isomaxplus":
+      model = ERFNet(NUM_CLASSES, use_isomaxplus=True).to(device)
     elif args.model =="enet":
         model = ENet(NUM_CLASSES).to(device)
     elif args.model == "bisenet":
@@ -123,7 +123,10 @@ def main(args):
 
     loader = DataLoader(cityscapes(args.datadir, input_transform_cityscapes, target_transform_cityscapes, subset=args.subset), num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
-    iouEvalVal = iouEval(NUM_CLASSES)
+    if args.method == "void":
+        iouEvalVal = iouEval(NUM_CLASSES, 20)
+    else:
+        iouEvalVal = iouEval(NUM_CLASSES)
 
     start = time.time()
 
@@ -173,6 +176,8 @@ def main(args):
     print(iou_classes_str[16], "train")
     print(iou_classes_str[17], "motorcycle")
     print(iou_classes_str[18], "bicycle")
+    if args.method == "void":
+        print(iou_classes_str[19], "void")
     print("=======================================")
     iouStr = getColorEntry(iouVal)+'{:0.2f}'.format(iouVal*100) + '\033[0m'
     print ("MEAN IoU: ", iouStr, "%")
@@ -190,6 +195,7 @@ if __name__ == '__main__':
     parser.add_argument('--num-workers', type=int, default=2)   # to avoid UserWarning of excessive worker creation
     parser.add_argument('--batch-size', type=int, default=1)
     parser.add_argument('--model', default="erfnet") # can be erfnet, erfnet_isomaxplus, enet, bisenet
+    parser.add_argument('--method', action='store_true')  # can be MSP, MaxLogit, MaxEntropy, void
     parser.add_argument('--cpu', action='store_true')
 
     main(parser.parse_args())
