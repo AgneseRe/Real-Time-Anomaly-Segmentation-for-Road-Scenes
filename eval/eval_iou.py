@@ -183,7 +183,7 @@ if __name__ == '__main__':
     parser.add_argument('--num-workers', type=int, default=2)   # to avoid UserWarning of excessive worker creation
     parser.add_argument('--batch-size', type=int, default=1)
     parser.add_argument('--model', default="erfnet") # can be erfnet, erfnet_isomaxplus, enet, bisenet
-    parser.add_argument('--method', action='store_true')  # can be MSP, MaxLogit, MaxEntropy, void
+    parser.add_argument('--method', type=str, default=None)  # can be MSP, MaxLogit, MaxEntropy, void
     parser.add_argument('--cpu', action='store_true')
 
     main(parser.parse_args())
