@@ -54,6 +54,7 @@ def main(args):
     print ("Loading weights: " + weightspath)
 
     device = torch.device('cuda' if torch.cuda.is_available() and not args.cpu else 'cpu')
+
     if args.model == "erfnet":
       model = ERFNet(NUM_CLASSES).to(device)
     elif args.model == "erfnet_isomaxplus":
@@ -63,34 +64,16 @@ def main(args):
     elif args.model == "bisenet":
         model = BiSeNet(NUM_CLASSES).to(device)
 
-    #model = torch.nn.DataParallel(model) //non carica modello su gpu
+    # model = torch.nn.DataParallel(model)
     if (not args.cpu):
         model = torch.nn.DataParallel(model).cuda()
-
-    '''def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
-        own_state = model.state_dict()
-        for name, param in state_dict.items():
-            if name not in own_state:
-                if name.startswith("module."):
-                    own_state[name.split("module.")[-1]].copy_(param)
-                else:
-                    print(name, " not loaded")
-                    continue
-            else:
-                own_state[name].copy_(param)
-        return model'''
     
-    def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
+    def load_my_state_dict(model, state_dict):  # custom function to load model when not all dict elements
         own_state = model.state_dict()
-        # ['module.encoder.initial_block.conv.weight', 'module.encoder.initial_block.conv.bias', 
-        # 'module.encoder.initial_block.bn.weight', 'module.encoder.initial_block.bn.bias', ... ]
-        # print(state_dict.keys())
-        # print(own_state.keys())
-        # Check if the model is 'erfnet_isomaxplus'and load the state dict for IsoMaxPlusLossFirstPart
+
+        # Check if the model is ERFNet with IsoMaxPlusLossFirstPart
         if args.model == "erfnet_isomaxplus" and 'loss_first_part_state_dict' in state_dict:
-            # Get the state dict for IsoMaxPlusLossFirstPart
             loss_first_part_state_dict = state_dict['loss_first_part_state_dict']
-            # Load the state dict for IsoMaxPlusLossFirstPart
             if hasattr(model.module.decoder, 'loss_first_part'):
                 model.module.decoder.loss_first_part.load_state_dict(loss_first_part_state_dict)
             else:
@@ -112,7 +95,6 @@ def main(args):
                 own_state[name].copy_(param)
         return model
     
-    weightspath = args.loadDir + args.loadWeights # serve davvero?
     model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
     print ("Model and weights LOADED successfully")
 
