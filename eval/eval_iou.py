@@ -23,6 +23,7 @@ from transform import Relabel, ToLabel, Colorize
 from iouEval import iouEval, getColorEntry
 
 # Import networks
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../train')))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from train.erfnet import ERFNet
 from train.enet import ENet
