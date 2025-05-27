@@ -122,7 +122,12 @@ def main(args):
         with torch.no_grad():
             outputs = model(inputs)
 
-        iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
+        if args.model == "bisenet":
+            result = outputs[0]
+        else:
+            result = outputs
+
+        iouEvalVal.addBatch(result.max(1)[1].unsqueeze(1).data, labels)
 
         filenameSave = filename[0].split("leftImg8bit/")[1] 
 
