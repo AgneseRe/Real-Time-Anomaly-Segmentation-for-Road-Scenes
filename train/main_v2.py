@@ -128,7 +128,7 @@ def train(args, model, enc=False):
             criterion = CombinedLoss(
                 focal_loss=FocalLoss(gamma=2.0, alpha=weights),
                 eim_loss=IsoMaxPlusLossSecondPart(entropic_scale=10.0),
-                alpha=1/2, beta=0.0, gamma=1/2)
+                alpha=0.0, beta=1/2, gamma=1/2)
         elif args.loss == "cefeim":
             criterion = CombinedLoss(
                 ce_loss=CrossEntropyLoss2d(weights),
