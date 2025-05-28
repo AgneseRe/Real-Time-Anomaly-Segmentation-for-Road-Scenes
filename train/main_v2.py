@@ -443,8 +443,11 @@ def train(args, model, enc=False):
 
         def save_model(model, filename, save_isomax=False):
             state = {'state_dict': model.state_dict()}
-            if save_isomax and hasattr(model.module.decoder, 'loss_first_part'):
-                state['loss_first_part_state_dict'] = model.module.decoder.loss_first_part.state_dict()
+            # Compatible with DataParallel
+            decoder = model.module.decoder if isinstance(model, torch.nn.DataParallel) else model.decoder
+            if save_isomax and hasattr(decoder, 'loss_first_part'):
+                state['loss_first_part_state_dict'] = decoder.loss_first_part.state_dict()
+                print("Saving IsoMaxPlus first part loss state dict")
             torch.save(state, filename)
         
         if args.epochs_save > 0 and step > 0 and step % args.epochs_save == 0:

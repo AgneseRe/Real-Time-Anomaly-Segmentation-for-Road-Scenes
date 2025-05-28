@@ -60,6 +60,11 @@ def main(args):
       model = ERFNet(NUM_CLASSES).to(device)
     elif args.model == "erfnet_isomaxplus":
       model = ERFNet(NUM_CLASSES, use_isomaxplus=True).to(device)
+      print("loss_first_part present in the decoder:",
+        hasattr(model.decoder if not isinstance(model, torch.nn.DataParallel) else model.module.decoder, 'loss_first_part'))
+      decoder = model.decoder if not isinstance(model, torch.nn.DataParallel) else model.module.decoder
+      print("🧠 Chiavi del decoder:")
+      print(decoder.state_dict().keys())
     elif args.model =="enet":
         model = ENet(NUM_CLASSES).to(device)
     elif args.model == "bisenet":
