@@ -14,6 +14,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import cv2
 from sklearn.metrics import auc, precision_recall_curve, roc_curve
 
 from ood_metrics import aupr, auroc, fpr_at_95_tpr
@@ -115,3 +116,50 @@ def plot_barcode(preds, labels, save_dir=None, file_name=None):
         plt.savefig(f"{save_dir}/{file_name}")
     else:
         plt.show()
+
+# ============ VISUALIZATION OF ANOMALY SCORE IMAGES ============
+def generate_colormap():
+    """ Generate a colormap that gradually goes from blue to white to red """
+
+    colormap = np.zeros((256, 1, 3), dtype=np.uint8)
+    # Gradually go from red (index=0) to white (index=128)
+    for i in range(128):
+        ratio = i / 127
+        b = int(255 * ratio)
+        g = int(255 * ratio)
+        r = 255
+        colormap[i, 0] = [b, g, r]
+    # Then go from white (index=128) to blue (index=255)
+    for i in range(128, 256):
+        ratio = (i - 128) / 127
+        b = 255
+        g = int(255 * (1 - ratio))
+        r = int(255 * (1 - ratio))
+        colormap[i, 0] = [b, g, r]
+    return colormap
+
+def save_colored_score_image(image_path, anomaly_score, save_path, file_name):
+    """
+    Save the image with the anomaly score colored in a new image.
+    
+    image_path: path to the input image
+    anomaly_score: anomaly score for each pixel
+    save_path: path to save the colored image
+    """
+    
+    # Load the image
+    image = cv2.imread(image_path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = cv2.resize(image, (anomaly_score.shape[1], anomaly_score.shape[0]))
+    
+    # Normalize the anomaly score
+    anomaly_score = (anomaly_score - np.min(anomaly_score)) / (np.max(anomaly_score) - np.min(anomaly_score))
+    
+    # Apply the colormap
+    anomaly_score = cv2.applyColorMap((anomaly_score * 255).astype(np.uint8), generate_colormap())
+    
+    # Combine the original image and the colored anomaly score
+    # combined = cv2.addWeighted(image, 0.5, anomaly_score, 0.5, 0)
+    
+    # Save the image
+    cv2.imwrite(f"{save_path}/{file_name}.png", cv2.cvtColor(anomaly_score, cv2.COLOR_RGB2BGR))

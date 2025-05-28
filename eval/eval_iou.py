@@ -23,6 +23,7 @@ from transform import Relabel, ToLabel, Colorize
 from iouEval import iouEval, getColorEntry
 
 # Import networks
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../train')))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from train.erfnet import ERFNet
 from train.enet import ENet
@@ -54,6 +55,7 @@ def main(args):
     print ("Loading weights: " + weightspath)
 
     device = torch.device('cuda' if torch.cuda.is_available() and not args.cpu else 'cpu')
+
     if args.model == "erfnet":
       model = ERFNet(NUM_CLASSES).to(device)
     elif args.model == "erfnet_isomaxplus":
@@ -63,34 +65,16 @@ def main(args):
     elif args.model == "bisenet":
         model = BiSeNet(NUM_CLASSES).to(device)
 
-    #model = torch.nn.DataParallel(model) //non carica modello su gpu
+    # model = torch.nn.DataParallel(model)
     if (not args.cpu):
         model = torch.nn.DataParallel(model).cuda()
-
-    '''def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
-        own_state = model.state_dict()
-        for name, param in state_dict.items():
-            if name not in own_state:
-                if name.startswith("module."):
-                    own_state[name.split("module.")[-1]].copy_(param)
-                else:
-                    print(name, " not loaded")
-                    continue
-            else:
-                own_state[name].copy_(param)
-        return model'''
     
-    def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
+    def load_my_state_dict(model, state_dict):  # custom function to load model when not all dict elements
         own_state = model.state_dict()
-        # ['module.encoder.initial_block.conv.weight', 'module.encoder.initial_block.conv.bias', 
-        # 'module.encoder.initial_block.bn.weight', 'module.encoder.initial_block.bn.bias', ... ]
-        # print(state_dict.keys())
-        # print(own_state.keys())
-        # Check if the model is 'erfnet_isomaxplus'and load the state dict for IsoMaxPlusLossFirstPart
+
+        # Check if the model is ERFNet with IsoMaxPlusLossFirstPart
         if args.model == "erfnet_isomaxplus" and 'loss_first_part_state_dict' in state_dict:
-            # Get the state dict for IsoMaxPlusLossFirstPart
             loss_first_part_state_dict = state_dict['loss_first_part_state_dict']
-            # Load the state dict for IsoMaxPlusLossFirstPart
             if hasattr(model.module.decoder, 'loss_first_part'):
                 model.module.decoder.loss_first_part.load_state_dict(loss_first_part_state_dict)
             else:
@@ -112,7 +96,6 @@ def main(args):
                 own_state[name].copy_(param)
         return model
     
-    weightspath = args.loadDir + args.loadWeights # serve davvero?
     model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
     print ("Model and weights LOADED successfully")
 
@@ -139,7 +122,12 @@ def main(args):
         with torch.no_grad():
             outputs = model(inputs)
 
-        iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
+        if args.model == "bisenet":
+            result = outputs[0]
+        else:
+            result = outputs
+
+        iouEvalVal.addBatch(result.max(1)[1].unsqueeze(1).data, labels)
 
         filenameSave = filename[0].split("leftImg8bit/")[1] 
 
@@ -195,7 +183,7 @@ if __name__ == '__main__':
     parser.add_argument('--num-workers', type=int, default=2)   # to avoid UserWarning of excessive worker creation
     parser.add_argument('--batch-size', type=int, default=1)
     parser.add_argument('--model', default="erfnet") # can be erfnet, erfnet_isomaxplus, enet, bisenet
-    parser.add_argument('--method', action='store_true')  # can be MSP, MaxLogit, MaxEntropy, void
+    parser.add_argument('--method', type=str, default=None)  # can be MSP, MaxLogit, MaxEntropy, void
     parser.add_argument('--cpu', action='store_true')
 
     main(parser.parse_args())

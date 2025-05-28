@@ -14,7 +14,8 @@ import torchvision.transforms as T
 from PIL import Image
 from argparse import ArgumentParser
 from ood_metrics import fpr_at_95_tpr, calc_metrics
-from plots import plot_roc, plot_pr, plot_barcode   # starting from ood_metrics original version
+from plots import plot_roc, plot_pr  # starting from ood_metrics original version
+from plots import save_colored_score_image  # custom function to save colored score image
 from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../train')))
@@ -69,6 +70,7 @@ def main():
     parser.add_argument('--method', type=str, default='MSP')
     parser.add_argument('--temperature', type=float, default=1.0)
     parser.add_argument('--plotdir', type=str, default=None)    # where to save PR curve
+    parser.add_argument('--save-colored-anomaly', type=str, default=None)  # where to save colored anomaly score image
 
     args = parser.parse_args()  # argparse.Namespace object that contained arguments
     anomaly_score_list = []
@@ -207,8 +209,30 @@ def main():
                 file_name=f"PR_curve_{args.method}_{args.loadModel}")
         plot_roc(val_out, val_label, title="ROC Curve", save_dir=args.plotdir, 
                 file_name=f"ROC_curve_{args.method}_{args.loadModel}")
-        # plot_barcode(val_out, val_label, title="Barcode Plot", save_dir=args.plotdir, 
-        #         file_name=f"ROC_curve_{args.method}_{args.loadModel}")
+    
+    # Save the colored score of the first image
+    if args.save_colored_anomaly:
+        path = glob.glob(os.path.expanduser(str(args.input)))[0] # First image path
+        file_name = osp.splitext(osp.basename(args.save_colored_anomaly))[0] # File name without extension
+        save_dir = osp.dirname(args.save_colored_anomaly) # Directory where to save the image
+        os.makedirs(save_dir, exist_ok=True) # Create the directory if it does not exist
+        save_colored_score_image(path, anomaly_score_list[0], save_path=save_dir, file_name=file_name)
+
+        # save also the corresponding label mask
+        pathGT = path.replace("images", "labels_masks")
+        if "RoadObsticle21" in pathGT:
+            pathGT = pathGT.replace("webp", "png")
+        if "fs_static" in pathGT:
+            pathGT = pathGT.replace("jpg", "png")
+        if "RoadAnomaly" in pathGT:
+            pathGT = pathGT.replace("jpg", "png")
+        save_colored_score_image(pathGT, ood_gts_list[0], save_path=save_dir, file_name="ground_truth")
+        
+        # Copy also the original image, cropped to the same size
+        image = cv2.imread(path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.resize(image, (anomaly_score_list[0].shape[1], anomaly_score_list[0].shape[0]))
+        cv2.imwrite(f"{save_dir}/image.png", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
