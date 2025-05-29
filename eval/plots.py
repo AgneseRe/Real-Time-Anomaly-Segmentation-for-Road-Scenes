@@ -119,35 +119,46 @@ def plot_barcode(preds, labels, save_dir=None, file_name=None):
 
 # ============ VISUALIZATION OF ANOMALY SCORE IMAGES ============
 def generate_colormap():
-    """ Generate a colormap that gradually goes from blue to white to red """
+    """ 
+    Generate a symmetric RGB colormap that gradually go from red to white to blue. 
+    Each pixel value (grayscale) is replaced with the corresponding color from colormap.
+
+    Returns:
+        - np.ndarray: A NumPy array of shape (256, 1, 3), representing the RGB colormap.
+    """
 
     colormap = np.zeros((256, 1, 3), dtype=np.uint8)
-    # Gradually go from red (index=0) to white (index=128)
+    
+    # From red BGR (0,0,255) to white BGR (255,255,255)
     for i in range(128):
         ratio = i / 127
         b = int(255 * ratio)
         g = int(255 * ratio)
         r = 255
         colormap[i, 0] = [b, g, r]
-    # Then go from white (index=128) to blue (index=255)
+
+    # From white BGR (255,255,255) to blue BGR (0,0,255)
     for i in range(128, 256):
         ratio = (i - 128) / 127
         b = 255
         g = int(255 * (1 - ratio))
         r = int(255 * (1 - ratio))
         colormap[i, 0] = [b, g, r]
+
     return colormap
 
 def save_colored_score_image(image_path, anomaly_score, save_path, file_name):
     """
-    Save the image with the anomaly score colored in a new image.
+    Save a colored visualization of an anomaly score map.
     
-    image_path: path to the input image
-    anomaly_score: anomaly score for each pixel
-    save_path: path to save the colored image
+    Parameters:
+        - image_path (str): Path to the input image.
+        - anomaly_score (np.ndarray): 2D array of anomaly scores for image pixels.
+        - save_path (str): Directory path where to save the colored image.
+        - file_name (str): Name of the saved image file (without extension)
     """
     
-    # Load the image
+    # Load input image
     image = cv2.imread(image_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = cv2.resize(image, (anomaly_score.shape[1], anomaly_score.shape[0]))
@@ -157,9 +168,6 @@ def save_colored_score_image(image_path, anomaly_score, save_path, file_name):
     
     # Apply the colormap
     anomaly_score = cv2.applyColorMap((anomaly_score * 255).astype(np.uint8), generate_colormap())
-    
-    # Combine the original image and the colored anomaly score
-    # combined = cv2.addWeighted(image, 0.5, anomaly_score, 0.5, 0)
-    
-    # Save the image
+
+    # Save image
     cv2.imwrite(f"{save_path}/{file_name}.png", cv2.cvtColor(anomaly_score, cv2.COLOR_RGB2BGR))

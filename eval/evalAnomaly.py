@@ -210,15 +210,18 @@ def main():
         plot_roc(val_out, val_label, title="ROC Curve", save_dir=args.plotdir, 
                 file_name=f"ROC_curve_{args.method}_{args.loadModel}")
     
-    # Save the colored score of the first image
+    # Save colored score input image
     if args.save_colored_anomaly:
-        path = glob.glob(os.path.expanduser(str(args.input)))[0] # First image path
-        file_name = osp.splitext(osp.basename(args.save_colored_anomaly))[0] # File name without extension
-        save_dir = osp.dirname(args.save_colored_anomaly) # Directory where to save the image
-        os.makedirs(save_dir, exist_ok=True) # Create the directory if it does not exist
+
+        # Find first image matching the input pattern
+        path = glob.glob(os.path.expanduser(str(args.input)))[0] 
+        file_name = osp.splitext(osp.basename(args.save_colored_anomaly))[0]
+        save_dir = osp.dirname(args.save_colored_anomaly)  
+        os.makedirs(save_dir, exist_ok=True)    
+
         save_colored_score_image(path, anomaly_score_list[0], save_path=save_dir, file_name=file_name)
 
-        # save also the corresponding label mask
+        # Prepare ground-truth path
         pathGT = path.replace("images", "labels_masks")
         if "RoadObsticle21" in pathGT:
             pathGT = pathGT.replace("webp", "png")
@@ -226,9 +229,10 @@ def main():
             pathGT = pathGT.replace("jpg", "png")
         if "RoadAnomaly" in pathGT:
             pathGT = pathGT.replace("jpg", "png")
+
         save_colored_score_image(pathGT, ood_gts_list[0], save_path=save_dir, file_name="ground_truth")
         
-        # Copy also the original image, cropped to the same size
+        # Load original image, resize to anomaly map size, and save
         image = cv2.imread(path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = cv2.resize(image, (anomaly_score_list[0].shape[1], anomaly_score_list[0].shape[0]))
