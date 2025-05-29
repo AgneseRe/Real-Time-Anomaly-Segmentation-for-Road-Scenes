@@ -214,7 +214,8 @@ def main():
     if args.save_colored_anomaly:
 
         # Find first image matching the input pattern
-        path = glob.glob(os.path.expanduser(str(args.input)))[0] 
+        input_path = args.input[0] if isinstance(args.input, list) else args.input
+        path = os.path.expanduser(input_path) 
         file_name = osp.splitext(osp.basename(args.save_colored_anomaly))[0]
         save_dir = osp.dirname(args.save_colored_anomaly)  
         os.makedirs(save_dir, exist_ok=True)    
