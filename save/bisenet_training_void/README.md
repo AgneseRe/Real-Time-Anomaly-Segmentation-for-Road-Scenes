@@ -7,7 +7,7 @@ This folder contains only some of the files generated during the **BiSeNet** tra
 * **bisenet.py**: copy of the model file used. 
 * **model_best.pth**: saved weights of the epoch that achieved best val accuracy.
 * **model.txt**: Plain text that displays the model's layers.
-* **opts.txt**: Plain text file containing the options used for this training .
+* **opts.txt**: Plain text file containing the options used for this training.
 
 > ⚠️ Due to the large size of certain files — some of them exceed GitHub’s file size limitations — they have been stored externally on Google Drive to keep the repository lightweight and manageable. In addition to the previous files, in the Drive you can also find **checkpoint.pth.tar** that contains the checkpoint of the last trained epoch, and **model_best.pth.tar** that contains the same parameters as "checkpoint.pth.tar" but for the epoch with best val accuracy.
 
