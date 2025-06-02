@@ -6,7 +6,7 @@
 [![ENet](https://img.shields.io/badge/arXiv-1606.02147-b31b1b.svg)](https://arxiv.org/abs/1606.02147)
 [![BiSeNet](https://img.shields.io/badge/arXiv-1808.00897-b31b1b.svg)](https://arxiv.org/abs/1808.00897)
 
-This repository contains the code developed for the project **Real-Time Anomaly Segmentation for Road Scenes**, carried out within the Advanced Machine Learning course (01URWOV) in the academic year 2024/2025 at Politecnico di Torino.
+This repository contains the code developed for the project **Real-Time Anomaly Segmentation for Road Scenes**, carried out within the Advanced Machine Learning course (01URWOV) in AY 2024/25 at Politecnico di Torino.
 
 ## Description
 This project focuses on real-time segmentation of anomalies in road scenes, a crucial aspect for autonomous driving applications. Leveraging deep learning models, the system is trained on the *Cityscapes* dataset to identify and segment anomalous objects or situations that may represent hazards or deviations from normal road conditions.
