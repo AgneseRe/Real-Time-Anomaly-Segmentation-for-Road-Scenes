@@ -137,6 +137,7 @@ class Decoder (nn.Module):
 
         output = self.output_conv(output)
 
+        # For training with IsoMaxPlusLoss
         if hasattr(self, 'loss_first_part'):    # check if we are using IsoMaxPlus
             output = self.loss_first_part(output)
 
