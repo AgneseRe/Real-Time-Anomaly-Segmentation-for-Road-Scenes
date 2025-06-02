@@ -2,21 +2,26 @@
 ![Python](https://img.shields.io/badge/language-Python-blue.svg)
 ![PyTorch](https://img.shields.io/badge/framework-PyTorch-red)
 ![Model](https://img.shields.io/badge/model-ERFNet--ENet--BiSeNet-green)
-
 [![ERFNet](https://img.shields.io/badge/IEEE-8063438-b31b1b.svg)](https://ieeexplore.ieee.org/document/8063438)
 [![ENet](https://img.shields.io/badge/arXiv-1606.02147-b31b1b.svg)](https://arxiv.org/abs/1606.02147)
 [![BiSeNet](https://img.shields.io/badge/arXiv-1808.00897-b31b1b.svg)](https://arxiv.org/abs/1808.00897)
 
-This repository provides a starter-code setup for the Real-Time Anomaly Segmentation project of the Machine Learning Course. It consists of the code base for training ERFNet on the Cityscapes dataset and perform anomaly segmentation.
+This repository contains the code developed for the project **Real-Time Anomaly Segmentation for Road Scenes**, conducted as part of the Advanced Machine Learning course (01URWOV) in the academic year 2024/25 at Politecnico di Torino.
+
+## Description
+This project focuses on real-time segmentation of anomalies in road scenes, a crucial aspect for autonomous driving applications. Leveraging deep learning models, particularly ERFNet, the system is trained on the Cityscapes dataset to identify and segment anomalous objects or situations that may represent hazards or deviations from normal road conditions.
 
 ## Packages
 
 For instructions, please refer to the README in each folder:
 
-- [train](train) contains tools for training the network for semantic segmentation.
-- [eval](eval) contains tools for evaluating/visualizing the network's output and performing anomaly segmentation.
+- [train](train) contains tools for training networks for semantic segmentation on *Cityscapes* dataset.
+- [eval](eval) contains tools for evaluating/visualizing the networks' output and performing anomaly segmentation.
+- [save](save) saved model checkpoints
+- [plots](plots) result plots and visualizations
 - [imagenet](imagenet) Contains script and model for pretraining ERFNet's encoder in Imagenet.
 - [trained_models](trained_models) Contains the trained models used in the papers.
+- [AML_AnomalySegmentation.ipynb](AML_AnomalySegmentation.ipynb) Colab Notebook containing all scripts for training, validation, and visualization of models.
 
 ## Requirements:
 
