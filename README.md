@@ -36,4 +36,27 @@ For instructions, please refer to the README in each folder:
 - The repo provides a pre-trained ERFNet on the cityscapes dataset that can be used to perform anomaly segmentation on test anomaly datasets.
 - Anomaly Inference Command:`python evalAnomaly.py --input '/home/shyam/ViT-Adapter/segmentation/unk-dataset/RoadAnomaly21/images/*.png`. Change the dataset path `'/home/shyam/ViT-Adapter/segmentation/unk-dataset/RoadAnomaly21/images/*.png`accordingly.
 
+## Contributing
+<table>
+  <tr>
+    <td align="center" style="border: none;">
+      <a href="https://github.com/AgneseRe">
+        <img src="https://github.com/AgneseRe.png" width="50px" style="border-radius: 50%; border: none;" alt=""/>
+        <br />
+        <sub>AgneseRe</sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/GiorgioRuvolo">
+        <img src="https://github.com/GiorgioRuvolo.png" width="50px" style="border-radius: 50%; border: none;" alt=""/>
+        <br />
+        <sub>GiorgioRuvolo</sub>
+      </a>
+    </td>
+  </tr>
+</table>
+
+## License
+This project is licensed under the MIT License.
+
 
